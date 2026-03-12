@@ -17,9 +17,6 @@ const state = {
   movingSiteId: null,
   deferredPrompt: null,
   userMovedSheet: false,
-  detailHidden: false,
-  detailCollapsed: false,
-  pendingAddCoords: null,
 };
 
 const STORAGE_KEY = 'camping-map-edits-v1';
@@ -41,17 +38,12 @@ async function init() {
   await loadSites();
   registerServiceWorker();
   initFloatingSheet();
-  if (window.innerWidth <= 820) {
-    setSheetHidden(true);
-    setSheetCollapsed(false);
-  }
 }
 
 function initMap() {
   state.map = L.map('map', {
     zoomControl: false,
     preferCanvas: true,
-    doubleClickZoom: false,
   }).setView(MAP_CENTER, MAP_ZOOM);
 
   L.control.zoom({ position: 'bottomright' }).addTo(state.map);
@@ -77,42 +69,18 @@ function initMap() {
 
   state.map.addLayer(state.clusterGroup);
   state.map.on('click', onMapClick);
-  state.map.on('contextmenu', onMapAddIntent);
-  state.map.on('dblclick', onMapAddIntent);
   document.getElementById('recenterBtn').addEventListener('click', () => {
     state.map.setView(MAP_CENTER, MAP_ZOOM);
   });
 }
 
 function initUI() {
-  const searchInput = document.getElementById('searchInput');
-  const mobileSearchInput = document.getElementById('mobileSearchInput');
-  searchInput.addEventListener('input', () => {
-    mobileSearchInput.value = searchInput.value;
-    renderSites();
-  });
-  mobileSearchInput.addEventListener('input', () => {
-    searchInput.value = mobileSearchInput.value;
-    renderSites();
-  });
-
-  document.getElementById('closeSheetBtn').addEventListener('click', closeDetailsPanel);
-  document.getElementById('collapseSheetBtn').addEventListener('click', toggleSheetCollapse);
-  document.getElementById('showDetailsBtn').addEventListener('click', showDetailsPanel);
+  document.getElementById('searchInput').addEventListener('input', renderSites);
+  document.getElementById('closeSheetBtn').addEventListener('click', clearSelection);
   document.getElementById('moveSiteBtn').addEventListener('click', startMoveMode);
   document.getElementById('copyCoordsBtn').addEventListener('click', copyCoords);
-  document.getElementById('addSiteBtn').addEventListener('click', () => openAddSiteDialog());
-  document.getElementById('mobileAddSiteBtn').addEventListener('click', () => {
-    document.getElementById('mobileMenuDialog').close();
-    openAddSiteDialog();
-  });
+  document.getElementById('addSiteBtn').addEventListener('click', openAddSiteDialog);
   document.getElementById('manageEditsBtn').addEventListener('click', () => document.getElementById('editsDialog').showModal());
-  document.getElementById('mobileManageEditsBtn').addEventListener('click', () => {
-    document.getElementById('mobileMenuDialog').close();
-    document.getElementById('editsDialog').showModal();
-  });
-  document.getElementById('mobileMenuBtn').addEventListener('click', () => document.getElementById('mobileMenuDialog').showModal());
-  document.getElementById('closeMobileMenuBtn').addEventListener('click', () => document.getElementById('mobileMenuDialog').close());
   document.getElementById('closeEditsBtn').addEventListener('click', () => document.getElementById('editsDialog').close());
   document.getElementById('cancelAddSiteBtn').addEventListener('click', closeAddSiteDialog);
   document.getElementById('cancelAddSiteTopBtn').addEventListener('click', closeAddSiteDialog);
@@ -121,8 +89,6 @@ function initUI() {
   document.getElementById('importInput').addEventListener('change', importEdits);
   document.getElementById('locateBtn').addEventListener('click', locateMe);
   document.getElementById('dockSheetBtn').addEventListener('click', resetSheetPosition);
-  document.getElementById('toggleSheetBtn').addEventListener('click', toggleDetailSheetSize);
-  document.getElementById('menuBtn').addEventListener('click', toggleToolbar);
 
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
@@ -139,43 +105,26 @@ function initUI() {
   });
 
   renderLayerChips();
-  initResponsiveToolbar();
 }
 
 function renderLayerChips() {
-  const targets = [
-    document.getElementById('layerChips'),
-    document.getElementById('mobileLayerChips')
-  ];
-
-  targets.forEach((chipWrap) => {
-    chipWrap.innerHTML = '';
-    Object.keys(LAYER_STYLE).forEach((layer) => {
-      const btn = document.createElement('button');
-      btn.className = 'chip active';
-      btn.textContent = LAYER_STYLE[layer].label;
-      btn.dataset.layer = layer;
-      btn.style.background = LAYER_STYLE[layer].color;
-      btn.style.borderColor = LAYER_STYLE[layer].color;
-      btn.style.color = LAYER_STYLE[layer].chipText;
+  const chipWrap = document.getElementById('layerChips');
+  chipWrap.innerHTML = '';
+  Object.keys(LAYER_STYLE).forEach((layer) => {
+    const btn = document.createElement('button');
+    btn.className = 'chip active';
+    btn.textContent = LAYER_STYLE[layer].label;
+    btn.dataset.layer = layer;
+    btn.style.background = LAYER_STYLE[layer].color;
+    btn.style.borderColor = LAYER_STYLE[layer].color;
+    btn.style.color = LAYER_STYLE[layer].chipText;
+    btn.addEventListener('click', () => {
+      if (state.visibleLayers.has(layer)) state.visibleLayers.delete(layer);
+      else state.visibleLayers.add(layer);
       btn.classList.toggle('active', state.visibleLayers.has(layer));
-      btn.addEventListener('click', () => {
-        if (state.visibleLayers.has(layer)) state.visibleLayers.delete(layer);
-        else state.visibleLayers.add(layer);
-        syncLayerChipState();
-        renderSites();
-      });
-      chipWrap.appendChild(btn);
+      renderSites();
     });
-  });
-
-  syncLayerChipState();
-}
-
-function syncLayerChipState() {
-  document.querySelectorAll('.chip[data-layer]').forEach((btn) => {
-    const active = state.visibleLayers.has(btn.dataset.layer);
-    btn.classList.toggle('active', active);
+    chipWrap.appendChild(btn);
   });
 }
 
@@ -199,7 +148,6 @@ async function loadSites() {
 
 function renderSites() {
   const query = document.getElementById('searchInput').value.trim().toLowerCase();
-  syncLayerChipState();
   state.clusterGroup.clearLayers();
 
   const visible = state.allSites.filter(site => {
@@ -257,7 +205,6 @@ function createClusterIcon(cluster) {
 
 function selectSite(site, marker = null) {
   state.selectedSite = site;
-  showDetailSheet();
   const title = document.getElementById('detailTitle');
   const meta = document.getElementById('detailMeta');
   const body = document.getElementById('detailBody');
@@ -283,17 +230,10 @@ function selectSite(site, marker = null) {
   if (marker) marker.openPopup();
   else if (site.__marker) site.__marker.openPopup();
 
-  if (window.innerWidth <= 760) {
-    document.getElementById('toolbarPanel').classList.remove('toolbar-open');
-    document.getElementById('menuBtn').setAttribute('aria-expanded', 'false');
-    document.getElementById('menuBtn').textContent = 'Menu';
-  }
-
   if (!state.userMovedSheet) resetSheetPosition();
 }
 
 function clearSelection() {
-  if (state.selectedSite?.__marker) state.selectedSite.__marker.closePopup();
   state.selectedSite = null;
   state.movingSiteId = null;
   document.getElementById('detailTitle').textContent = 'Pick a marker';
@@ -325,46 +265,17 @@ function onMapClick(e) {
   selectSite(site);
 }
 
-
-function onMapAddIntent(e) {
-  if (state.movingSiteId) return;
-  state.pendingAddCoords = { lat: e.latlng.lat, lng: e.latlng.lng };
-  const lat = e.latlng.lat.toFixed(6);
-  const lng = e.latlng.lng.toFixed(6);
-  L.popup()
-    .setLatLng(e.latlng)
-    .setContent(`
-      <div class="popup-title">Add a site here?</div>
-      <div class="popup-meta">${lat}, ${lng}</div>
-      <div class="popup-actions">
-        <button onclick="window.__campingMap.addHere(${e.latlng.lat}, ${e.latlng.lng})">Add Site Here</button>
-      </div>
-    `)
-    .openOn(state.map);
-}
-
 function copyCoords() {
   if (!state.selectedSite) return;
   const text = `${state.selectedSite.lat.toFixed(6)}, ${state.selectedSite.lng.toFixed(6)}`;
   navigator.clipboard?.writeText(text);
 }
 
-function openAddSiteDialog(coords = null) {
-  state.pendingAddCoords = coords;
-  const dialog = document.getElementById('addSiteDialog');
-  const form = document.getElementById('addSiteForm');
-  if (coords) {
-    form.elements.lat.value = coords.lat.toFixed(6);
-    form.elements.lng.value = coords.lng.toFixed(6);
-  } else {
-    form.elements.lat.value = '';
-    form.elements.lng.value = '';
-  }
-  dialog.showModal();
+function openAddSiteDialog() {
+  document.getElementById('addSiteDialog').showModal();
 }
 
 function closeAddSiteDialog() {
-  state.pendingAddCoords = null;
   document.getElementById('addSiteDialog').close();
 }
 
@@ -395,7 +306,6 @@ function handleAddSiteSubmit(e) {
   selectSite(added);
   state.map.setView([lat, lng], 11);
   form.reset();
-  state.pendingAddCoords = null;
   form.elements.layer.value = 'Boondocking';
   closeAddSiteDialog();
 }
@@ -446,45 +356,13 @@ async function importEdits(e) {
   document.getElementById('editsDialog').close();
 }
 
-
-function setSheetHidden(hidden) {
-  state.detailHidden = hidden;
-  const sheet = document.getElementById('detailSheet');
-  const btn = document.getElementById('showDetailsBtn');
-  sheet.classList.toggle('is-hidden', hidden);
-  btn.classList.toggle('hidden', !hidden);
-}
-
-function setSheetCollapsed(collapsed) {
-  state.detailCollapsed = collapsed;
-  const sheet = document.getElementById('detailSheet');
-  const btn = document.getElementById('collapseSheetBtn');
-  sheet.classList.toggle('is-collapsed', collapsed);
-  btn.textContent = collapsed ? '+' : '—';
-  btn.title = collapsed ? 'Expand details' : 'Collapse details';
-  btn.setAttribute('aria-label', collapsed ? 'Expand details' : 'Collapse details');
-}
-
-function closeDetailsPanel() {
-  clearSelection();
-  setSheetHidden(true);
-}
-
-function showDetailsPanel() {
-  setSheetHidden(false);
-}
-
-function toggleSheetCollapse() {
-  setSheetCollapsed(!state.detailCollapsed);
-}
-
 function locateMe() {
   if (!navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition((pos) => {
     const { latitude, longitude } = pos.coords;
     state.map.setView([latitude, longitude], 10);
     L.circleMarker([latitude, longitude], {
-      radius: 7, color: '#17311f', fillColor: '#d9c59b', fillOpacity: 1, weight: 3
+      radius: 8, color: '#17311f', fillColor: '#d9c59b', fillOpacity: 1, weight: 3
     }).addTo(state.map).bindPopup('You are here-ish.').openPopup();
   });
 }
@@ -527,59 +405,6 @@ function escapeHtml(str) {
   }[m]));
 }
 
-
-function onMapAddIntent(e) {
-  if (state.movingSiteId) return;
-  openAddSiteDialog({ lat: e.latlng.lat, lng: e.latlng.lng });
-}
-
-function showDetailSheet() {
-  const sheet = document.getElementById('detailSheet');
-  sheet.classList.remove('hidden-sheet');
-  sheet.setAttribute('aria-hidden', 'false');
-}
-
-function hideDetailSheet() {
-  clearSelection({ keepVisible: true });
-  const sheet = document.getElementById('detailSheet');
-  sheet.classList.add('hidden-sheet');
-  sheet.setAttribute('aria-hidden', 'true');
-}
-
-function toggleDetailSheetSize() {
-  const sheet = document.getElementById('detailSheet');
-  state.detailSheetExpanded = !state.detailSheetExpanded;
-  sheet.classList.toggle('sheet-expanded', state.detailSheetExpanded);
-  constrainSheetToPanel();
-}
-
-function toggleToolbar() {
-  const panel = document.getElementById('toolbarPanel');
-  const btn = document.getElementById('menuBtn');
-  const open = !panel.classList.contains('toolbar-open');
-  panel.classList.toggle('toolbar-open', open);
-  btn.setAttribute('aria-expanded', String(open));
-  btn.textContent = open ? 'Close' : 'Menu';
-}
-
-function initResponsiveToolbar() {
-  const panel = document.getElementById('toolbarPanel');
-  const btn = document.getElementById('menuBtn');
-  const sync = () => {
-    if (window.innerWidth > 760) {
-      panel.classList.add('toolbar-open');
-      btn.setAttribute('aria-expanded', 'true');
-      btn.textContent = 'Menu';
-    } else {
-      panel.classList.remove('toolbar-open');
-      btn.setAttribute('aria-expanded', 'false');
-      btn.textContent = 'Menu';
-    }
-  };
-  sync();
-  window.addEventListener('resize', sync);
-}
-
 function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
@@ -593,8 +418,6 @@ function initFloatingSheet() {
 
   restoreSheetPosition();
   constrainSheetToPanel();
-  hideDetailSheet();
-  if (window.innerWidth <= 820) return;
   window.addEventListener('resize', constrainSheetToPanel);
   window.addEventListener('orientationchange', () => setTimeout(constrainSheetToPanel, 100));
 
@@ -690,11 +513,6 @@ function constrainSheetToPanel() {
   const panelRect = panel.getBoundingClientRect();
   const rect = sheet.getBoundingClientRect();
 
-  if (window.innerWidth <= 760 && !state.userMovedSheet) {
-    resetSheetPosition();
-    return;
-  }
-
   if (!state.userMovedSheet) {
     resetSheetPosition();
     return;
@@ -726,12 +544,6 @@ function resetSheetPosition() {
   sheet.style.top = '';
   sheet.style.right = '';
   sheet.style.bottom = '';
-  if (window.innerWidth <= 760) {
-    sheet.style.left = '0.75rem';
-    sheet.style.right = '0.75rem';
-    sheet.style.top = 'auto';
-    sheet.style.bottom = '0.75rem';
-  }
 }
 
 window.__campingMap = {
@@ -745,9 +557,5 @@ window.__campingMap = {
       selectSite(site);
       startMoveMode();
     }
-  },
-  addHere(lat, lng) {
-    state.map.closePopup();
-    openAddSiteDialog({ lat, lng });
   }
 };

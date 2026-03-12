@@ -19,38 +19,57 @@
 </head>
 <body>
   <div class="app-shell">
-    <header class="topbar compact-topbar">
+    <header class="topbar">
       <div class="brand-wrap">
         <div class="brand-kicker">Camping Across America</div>
-        <h1>Camp, roam, and fix the pins that wandered off.</h1>
+        <h1>Camp, roam, and keep bad pins out of Lake Superior.</h1>
       </div>
-      <div class="top-actions compact-actions">
-        <button id="menuBtn" class="btn btn-ghost" type="button" aria-expanded="false" aria-controls="toolbarPanel">Menu</button>
+      <div class="top-actions">
+        <button id="menuBtn" class="icon-btn menu-btn" type="button" aria-label="Open map menu">☰</button>
+        <button id="locateBtn" class="icon-btn compact-btn" type="button" aria-label="Locate me" title="Locate me">◎</button>
         <button id="installBtn" class="btn btn-primary hidden" type="button">Add to Home Screen</button>
       </div>
     </header>
 
-    <section class="toolbar toolbar-collapsible" id="toolbarPanel">
+    <section class="toolbar desktop-toolbar">
       <label class="search-wrap">
         <span class="sr-only">Search sites</span>
         <input id="searchInput" type="search" placeholder="Search campsites, boondocking, parks..." />
       </label>
       <div class="chip-row" id="layerChips"></div>
       <div class="toolbar-actions">
-        <button id="addSiteBtn" class="btn btn-primary" type="button">Add Site</button>
         <button id="manageEditsBtn" class="btn btn-ghost" type="button">Manage Edits</button>
       </div>
     </section>
 
+    <aside id="mobileMenu" class="mobile-menu hidden" aria-hidden="true">
+      <div class="mobile-menu-card">
+        <div class="menu-header">
+          <h2>Map Menu</h2>
+          <button id="closeMenuBtn" class="icon-btn" type="button" aria-label="Close menu">✕</button>
+        </div>
+        <label class="search-wrap">
+          <span class="sr-only">Search sites</span>
+          <input id="searchInputMobile" type="search" placeholder="Search sites..." />
+        </label>
+        <div class="menu-subhead">Layers</div>
+        <div class="stacked-chips" id="layerChipsMobile"></div>
+        <div class="menu-actions">
+          <button id="manageEditsBtnMobile" class="btn btn-ghost wide-btn" type="button">Manage Edits</button>
+        </div>
+        <div class="menu-help">
+          <p><strong>Add a site:</strong> right-click on desktop, or double-tap on phone.</p>
+          <p><strong>Move a site:</strong> open its details, tap <em>Move Site</em>, then tap the correct spot.</p>
+        </div>
+      </div>
+    </aside>
+
     <main class="main-grid">
       <section class="map-panel">
         <div id="map"></div>
-        <div class="map-fabs">
-          <button id="locateBtn" class="fab mini-fab" type="button" aria-label="Locate me" title="Locate me">⌖</button>
-          <button id="recenterBtn" class="fab" type="button" aria-label="Recenter map" title="Recenter map">◎</button>
-        </div>
+        <button id="recenterBtn" class="fab" type="button" aria-label="Recenter map">⌖</button>
 
-        <aside class="detail-sheet floating-sheet" id="detailSheet" aria-live="polite">
+        <aside class="detail-sheet floating-sheet is-minimized" id="detailSheet" aria-live="polite" data-state="minimized">
           <div class="sheet-inner">
             <div class="sheet-dragbar" id="sheetDragHandle">
               <div class="sheet-handle"></div>
@@ -62,9 +81,9 @@
                 <h2 id="detailTitle">Pick a marker</h2>
               </div>
               <div class="sheet-header-actions">
-                <button id="toggleSheetBtn" class="icon-btn" type="button" aria-label="Expand or shrink details" title="Expand or shrink details">↕</button>
+                <button id="toggleSheetBtn" class="icon-btn" type="button" aria-label="Expand details" title="Expand details">▣</button>
                 <button id="dockSheetBtn" class="icon-btn" type="button" aria-label="Reset panel position" title="Reset panel position">⤢</button>
-                <button id="closeSheetBtn" class="icon-btn" type="button" aria-label="Close details" title="Close details">✕</button>
+                <button id="closeSheetBtn" class="icon-btn" type="button" aria-label="Hide details">✕</button>
               </div>
             </div>
 
@@ -90,8 +109,8 @@
         <button id="cancelAddSiteTopBtn" class="icon-btn" type="button" aria-label="Close add site dialog">✕</button>
       </div>
 
-      <div class="dialog-copy subtle-copy">
-        <p id="addSiteHint">Right-click on desktop or double-tap on the map to drop a site using that spot's coordinates.</p>
+      <div class="dialog-copy">
+        <p>Coordinates come from where you clicked on the map. You can tweak them here if needed.</p>
       </div>
 
       <div class="form-grid">
@@ -111,11 +130,11 @@
         </label>
         <label>
           <span>Latitude</span>
-          <input name="lat" type="number" step="any" required placeholder="46.7821" />
+          <input name="lat" id="addLat" type="number" step="any" required placeholder="46.7821" />
         </label>
         <label>
           <span>Longitude</span>
-          <input name="lng" type="number" step="any" required placeholder="-88.0204" />
+          <input name="lng" id="addLng" type="number" step="any" required placeholder="-88.0204" />
         </label>
         <label class="form-span-2">
           <span>Notes</span>
@@ -130,6 +149,21 @@
     </form>
   </dialog>
 
+  <dialog id="mapActionDialog" class="app-dialog small-dialog">
+    <div class="dialog-card">
+      <div class="dialog-header">
+        <h2>Map Spot</h2>
+        <button id="closeMapActionBtn" class="icon-btn" type="button" aria-label="Close map actions">✕</button>
+      </div>
+      <div class="dialog-copy">
+        <p id="mapActionCoords">Coordinates:</p>
+      </div>
+      <div class="dialog-actions stacked-actions">
+        <button id="addSiteAtPointBtn" class="btn btn-primary wide-btn" type="button">Add Site Here</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog id="editsDialog" class="app-dialog">
     <div class="dialog-card">
       <div class="dialog-header">
@@ -137,8 +171,8 @@
         <button id="closeEditsBtn" class="icon-btn" type="button" aria-label="Close edits dialog">✕</button>
       </div>
       <div class="dialog-copy">
-        <p><strong>Local edits are kept in this browser on this device.</strong> That is enough for everyday use on one phone or one computer.</p>
-        <p><strong>Export edits</strong> is optional backup insurance, not something you need every five minutes.</p>
+        <p><strong>Local edits are kept in this browser on this device.</strong> That is enough for day-to-day use on one phone or one computer.</p>
+        <p><strong>Export edits</strong> only matters if you want a backup, want to move your fixes to another device, or eventually merge them into your GitHub files.</p>
       </div>
       <div class="dialog-actions stacked-actions">
         <button id="exportBtn" class="btn btn-primary" type="button">Export Edits</button>
