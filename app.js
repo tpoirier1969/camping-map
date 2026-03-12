@@ -1,24 +1,20 @@
-const VERSION = 'v17.0';
+const VERSION = 'v17.2';
 const DEFAULT_CENTER = [46.6, -87.4];
 const DEFAULT_ZOOM = 6;
 const DETAIL_ZOOM = 7;
 const STATE_PADDING_FACTOR = 0.18;
-const TRAIL_URLS = [
-  'data/trails.geojson',
-  'trails.geojson'
-];
-
+const LONG_PRESS_MS = 700;
 const BUILTIN_BUCKETS = {
-  modern: { label: 'Modern', color: '#2a7fff', radius: 5 },
-  rustic: { label: 'Rustic', color: '#a46a24', radius: 5 },
-  boondocking: { label: 'Boondocking / dispersed', color: '#3f8c53', radius: 5 },
-  private: { label: 'Private campgrounds', color: '#cf4f7d', radius: 5 },
-  national_forest: { label: 'National forest campgrounds', color: '#1f8a70', radius: 5 },
-  state_federal_modern: { label: 'State / federal modern campgrounds', color: '#2a7fff', radius: 5 },
-  state_federal_rustic: { label: 'State / federal rustic campgrounds', color: '#a46a24', radius: 5 },
-  trailhead: { label: 'Trailheads', color: '#8e5bd6', radius: 5 },
-  other: { label: 'Other campsites', color: '#949494', radius: 5 },
-  state_summary: { label: 'State summary', color: '#7f4dff', radius: 12 },
+  modern: { label: 'Modern', color: '#2a7fff', radius: 8 },
+  rustic: { label: 'Rustic', color: '#a46a24', radius: 8 },
+  boondocking: { label: 'Boondocking / dispersed', color: '#3f8c53', radius: 8 },
+  private: { label: 'Private campgrounds', color: '#cf4f7d', radius: 8 },
+  national_forest: { label: 'National forest campgrounds', color: '#1f8a70', radius: 8 },
+  state_federal_modern: { label: 'State / federal modern campgrounds', color: '#2a7fff', radius: 8 },
+  state_federal_rustic: { label: 'State / federal rustic campgrounds', color: '#a46a24', radius: 8 },
+  trailhead: { label: 'Trailheads', color: '#8e5bd6', radius: 8 },
+  other: { label: 'Other campsites', color: '#949494', radius: 8 },
+  state_summary: { label: 'State summary', color: '#7f4dff', radius: 14 },
   trail: { label: 'Trail', color: '#ff7a00', radius: 0 }
 };
 
@@ -35,6 +31,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 const siteLayer = L.layerGroup().addTo(map);
 const stateLayer = L.layerGroup().addTo(map);
 const trailLayer = L.layerGroup();
+const draftLayer = L.layerGroup().addTo(map);
 
 const els = {
   menuToggle: document.getElementById('menuToggle'),
@@ -68,7 +65,13 @@ const model = {
   stateGroups: new Map(),
   stateBBoxes: new Map(),
   layerDefs: new Map(),
-  layerState: new Map()
+  layerState: new Map(),
+  addMode: false,
+  draftMarker: null,
+  longPressTimer: null,
+  touchStartLatLng: null,
+  touchMoved: false,
+  startStatusText: 'Loading map data…'
 };
 
 function normalizeCategory(rawCategory = '') {
@@ -256,27 +259,23 @@ async function loadData() {
     'sites.json'
   ]);
 
-  const trailRaw = await loadFirstAvailable(TRAIL_URLS);
-
   model.sites = normalizeSiteArray(sitesRaw).map(normalizeSite).filter(Boolean);
-  model.trails = trailRaw?.features?.length ? trailRaw : null;
+  model.trails = null;
 
   buildLayerDefinitions();
   buildStateGroups();
   renderLayerControls();
   renderLegend();
   syncTrailUi();
+  ensureAddSiteUi();
   drawEverything();
 
   const siteMsg = model.sites.length
     ? `Loaded ${model.sites.length} campsites across ${model.layerDefs.size} visible layer${model.layerDefs.size === 1 ? '' : 's'}.`
     : 'No campsite file was found. Keep your existing sites.json in place.';
 
-  if (model.trails?.features?.length) {
-    els.statusText.textContent = `${siteMsg} Labeled trail overlays are available.`;
-  } else {
-    els.statusText.textContent = `${siteMsg} Trail overlay removed from this package until accurate geometry is available.`;
-  }
+  model.startStatusText = `${siteMsg} Trail layer removed.`;
+  setStatus(model.startStatusText);
 }
 
 function buildLayerDefinitions() {
@@ -292,7 +291,7 @@ function buildLayerDefinitions() {
         label: site.layerLabel,
         bucket: site.bucket,
         color,
-        radius: bucketStyle.radius || 5,
+        radius: bucketStyle.radius || 8,
         checked: true
       });
       model.layerState.set(site.layerKey, true);
@@ -357,9 +356,6 @@ function renderLegend() {
   for (const def of model.layerDefs.values()) {
     items.push({ type: 'dot', label: def.label, color: def.color });
   }
-  if (model.trails?.features?.length) {
-    items.push({ type: 'line', label: 'Trail overlay', color: BUILTIN_BUCKETS.trail.color });
-  }
 
   els.legendList.innerHTML = items.map((item) => `
     <div class="legend-item">
@@ -372,14 +368,205 @@ function renderLegend() {
 }
 
 function syncTrailUi() {
-  const hasTrails = Boolean(model.trails?.features?.length);
-  els.trailSection.hidden = !hasTrails;
-  if (!hasTrails) {
-    if (trailLayer && map.hasLayer(trailLayer)) map.removeLayer(trailLayer);
-    return;
+  els.trailSection.hidden = true;
+  if (trailLayer && map.hasLayer(trailLayer)) map.removeLayer(trailLayer);
+}
+
+function ensureAddSiteUi() {
+  if (document.getElementById('addSiteActions')) return;
+
+  const displaySection = els.toggleStateSummaries.closest('.panel-section');
+  if (!displaySection) return;
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'panel-section';
+  wrapper.id = 'addSiteActions';
+  wrapper.innerHTML = `
+    <h2>Add a site</h2>
+    <p id="addSiteHint">Phone-friendly: tap <strong>Start add mode</strong>, then tap the map where the site belongs. You can also long-press the map.</p>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+      <button type="button" id="startAddSiteBtn" class="ghost-button">Start add mode</button>
+      <button type="button" id="cancelAddSiteBtn" class="ghost-button" hidden>Cancel add mode</button>
+      <button type="button" id="clearDraftSiteBtn" class="ghost-button" hidden>Clear draft pin</button>
+    </div>
+  `;
+  displaySection.insertAdjacentElement('afterend', wrapper);
+
+  wrapper.querySelector('#startAddSiteBtn').addEventListener('click', startAddMode);
+  wrapper.querySelector('#cancelAddSiteBtn').addEventListener('click', cancelAddMode);
+  wrapper.querySelector('#clearDraftSiteBtn').addEventListener('click', clearDraftMarker);
+}
+
+function setStatus(message) {
+  els.statusText.textContent = message;
+}
+
+function refreshAddUi() {
+  const startBtn = document.getElementById('startAddSiteBtn');
+  const cancelBtn = document.getElementById('cancelAddSiteBtn');
+  const clearBtn = document.getElementById('clearDraftSiteBtn');
+  const hint = document.getElementById('addSiteHint');
+
+  if (!startBtn || !cancelBtn || !clearBtn || !hint) return;
+
+  startBtn.hidden = model.addMode;
+  cancelBtn.hidden = !model.addMode;
+  clearBtn.hidden = !model.draftMarker;
+
+  if (model.addMode) {
+    hint.innerHTML = 'Add mode is armed. Tap the map once to drop the new site.';
+  } else if (model.draftMarker) {
+    hint.innerHTML = 'Draft pin placed. Open the pin popup to copy the JSON snippet.';
+  } else {
+    hint.innerHTML = 'Phone-friendly: tap <strong>Start add mode</strong>, then tap the map where the site belongs. You can also long-press the map.';
   }
-  trailLayer.addTo(map);
-  els.trailStatusText.textContent = 'Accurate labeled trail data loaded.';
+}
+
+function startAddMode() {
+  model.addMode = true;
+  setStatus('Add mode ready. Tap the map where the new site belongs.');
+  refreshAddUi();
+}
+
+function cancelAddMode() {
+  model.addMode = false;
+  setStatus(model.startStatusText);
+  refreshAddUi();
+}
+
+function clearDraftMarker() {
+  draftLayer.clearLayers();
+  model.draftMarker = null;
+  setStatus(model.addMode ? 'Add mode ready. Tap the map where the new site belongs.' : model.startStatusText);
+  refreshAddUi();
+}
+
+function getLikelyLayerKey() {
+  const enabled = [...model.layerDefs.values()].filter((def) => isLayerEnabled(def.key));
+  return enabled[0]?.key || [...model.layerDefs.keys()][0] || 'boondocking';
+}
+
+function buildDraftPayload(latlng, overrides = {}) {
+  const chosenLayerKey = overrides.layerKey || getLikelyLayerKey();
+  const chosenDef = model.layerDefs.get(chosenLayerKey);
+  return {
+    name: overrides.name || 'New site',
+    state: overrides.state || '',
+    category: overrides.category || chosenDef?.bucket || 'other',
+    layer: chosenDef?.label || overrides.layer || '',
+    lat: Number(latlng.lat.toFixed(6)),
+    lng: Number(latlng.lng.toFixed(6)),
+    access: overrides.access || '',
+    cost: overrides.cost || '',
+    showers: overrides.showers || '',
+    website: overrides.website || '',
+    description: overrides.description || ''
+  };
+}
+
+function popupHtmlForDraft(payload) {
+  const pretty = JSON.stringify(payload, null, 2);
+  const layerOptions = [...model.layerDefs.values()].map((def) => (
+    `<option value="${escapeAttribute(def.key)}" ${def.label === payload.layer || def.key === payload.layer ? 'selected' : ''}>${escapeHtml(def.label)}</option>`
+  )).join('');
+
+  return `
+    <div class="popup-content">
+      <div class="popup-title">New site draft</div>
+      <div class="popup-meta">Tap fields, then copy the snippet into your data file.</div>
+      <div class="draft-form" style="display:grid; gap:8px;">
+        <label><div>Name</div><input data-draft-field="name" value="${escapeAttribute(payload.name)}" style="width:100%"></label>
+        <label><div>State</div><input data-draft-field="state" value="${escapeAttribute(payload.state)}" style="width:100%"></label>
+        <label><div>Layer</div><select data-draft-field="layerKey" style="width:100%">${layerOptions}</select></label>
+        <label><div>Category</div><input data-draft-field="category" value="${escapeAttribute(payload.category)}" style="width:100%"></label>
+        <label><div>Access</div><input data-draft-field="access" value="${escapeAttribute(payload.access)}" style="width:100%"></label>
+        <label><div>Cost</div><input data-draft-field="cost" value="${escapeAttribute(payload.cost)}" style="width:100%"></label>
+        <label><div>Website</div><input data-draft-field="website" value="${escapeAttribute(payload.website)}" style="width:100%"></label>
+        <label><div>Description</div><textarea data-draft-field="description" rows="3" style="width:100%">${escapeHtml(payload.description)}</textarea></label>
+      </div>
+      <div class="popup-meta">${payload.lat}, ${payload.lng}</div>
+      <div class="popup-actions" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+        <button type="button" data-copy-draft>Copy JSON</button>
+        <button type="button" data-clear-draft>Remove pin</button>
+      </div>
+      <pre data-draft-preview style="white-space:pre-wrap; max-height:220px; overflow:auto; margin-top:10px;">${escapeHtml(pretty)}</pre>
+    </div>
+  `;
+}
+
+function placeDraftMarker(latlng) {
+  clearDraftMarker();
+  const payload = buildDraftPayload(latlng);
+
+  const marker = L.circleMarker(latlng, {
+    radius: 11,
+    color: '#ffd54a',
+    fillColor: '#ffd54a',
+    fillOpacity: 0.9,
+    weight: 3
+  }).addTo(draftLayer);
+
+  marker.draftPayload = payload;
+  marker.bindPopup(popupHtmlForDraft(payload), { maxWidth: 320 }).openPopup();
+  model.draftMarker = marker;
+  model.addMode = false;
+  setStatus(`Draft pin placed at ${payload.lat}, ${payload.lng}. Open the pin popup to copy the JSON snippet.`);
+  refreshAddUi();
+}
+
+function getTouchLatLng(touch) {
+  if (!touch) return null;
+  const point = map.mouseEventToContainerPoint({ clientX: touch.clientX, clientY: touch.clientY });
+  return map.containerPointToLatLng(point);
+}
+
+function beginLongPress(latlng) {
+  clearLongPress();
+  model.touchStartLatLng = latlng;
+  model.touchMoved = false;
+  model.longPressTimer = window.setTimeout(() => {
+    model.longPressTimer = null;
+    if (!model.touchMoved && model.touchStartLatLng) {
+      placeDraftMarker(model.touchStartLatLng);
+    }
+  }, LONG_PRESS_MS);
+}
+
+function clearLongPress() {
+  if (model.longPressTimer) {
+    window.clearTimeout(model.longPressTimer);
+    model.longPressTimer = null;
+  }
+}
+
+function wireLongPressHandlers() {
+  const container = map.getContainer();
+
+  container.addEventListener('touchstart', (event) => {
+    if (!event.touches || event.touches.length !== 1) {
+      clearLongPress();
+      return;
+    }
+    const latlng = getTouchLatLng(event.touches[0]);
+    if (latlng) beginLongPress(latlng);
+  }, { passive: true });
+
+  container.addEventListener('touchmove', (event) => {
+    if (!model.touchStartLatLng || !event.touches || !event.touches[0]) return;
+    const latlng = getTouchLatLng(event.touches[0]);
+    if (!latlng) return;
+    if (latlng.distanceTo(model.touchStartLatLng) > 20) {
+      model.touchMoved = true;
+      clearLongPress();
+    }
+  }, { passive: true });
+
+  ['touchend', 'touchcancel'].forEach((name) => {
+    container.addEventListener(name, () => {
+      clearLongPress();
+      model.touchStartLatLng = null;
+    }, { passive: true });
+  });
 }
 
 function getPaddedBounds(bounds, factor = STATE_PADDING_FACTOR) {
@@ -479,13 +666,13 @@ function drawSites() {
   for (const site of enabledSites) {
     const ll = L.latLng(site.latlng[0], site.latlng[1]);
     if (!visibleBounds.contains(ll)) continue;
-    const style = model.layerDefs.get(site.layerKey) || { color: BUILTIN_BUCKETS.other.color, radius: 5 };
+    const style = model.layerDefs.get(site.layerKey) || { color: BUILTIN_BUCKETS.other.color, radius: 8 };
     L.circleMarker(ll, {
-      radius: style.radius || 5,
+      radius: style.radius || 8,
       color: style.color,
       fillColor: style.color,
       fillOpacity: 0.9,
-      weight: 1
+      weight: 2
     }).bindPopup(popupHtmlForSite(site)).addTo(siteLayer);
 
     visibleSites += 1;
@@ -519,7 +706,7 @@ function drawStateSummaries() {
       color: BUILTIN_BUCKETS.state_summary.color,
       fillColor: BUILTIN_BUCKETS.state_summary.color,
       fillOpacity: 0.85,
-      weight: 1
+      weight: 2
     }).bindPopup(popupHtmlForState(state, sites));
 
     marker.addTo(stateLayer);
@@ -541,34 +728,6 @@ function drawStateSummaries() {
 
 function drawTrails() {
   trailLayer.clearLayers();
-  if (!model.trails?.features?.length || els.trailSection.hidden || !els.toggleTrails.checked) return;
-
-  const geoJson = L.geoJSON(model.trails, {
-    style: () => ({
-      color: BUILTIN_BUCKETS.trail.color,
-      weight: 3,
-      opacity: 0.9
-    }),
-    onEachFeature: (feature, layer) => {
-      const p = feature.properties || {};
-      const name = p.name || p.title || 'Trail';
-      const note = p.note || p.description || 'Trail overlay';
-      const url = p.url ? `<div><a href="${escapeAttribute(p.url)}" target="_blank" rel="noopener noreferrer">More info</a></div>` : '';
-      layer.bindPopup(`
-        <div class="popup-content">
-          <div class="popup-title">${escapeHtml(name)}</div>
-          <div class="popup-meta">${escapeHtml(note)}</div>
-          ${url}
-        </div>
-      `);
-      layer.bindTooltip(name, {
-        permanent: true,
-        direction: 'center',
-        className: 'trail-label'
-      });
-    }
-  });
-  geoJson.addTo(trailLayer);
 }
 
 function updateCounts(siteDrawInfo, stateDrawInfo) {
@@ -614,6 +773,11 @@ function escapeAttribute(value) {
 }
 
 map.on('moveend zoomend', drawEverything);
+map.on('click', (event) => {
+  if (!model.addMode) return;
+  placeDraftMarker(event.latlng);
+});
+
 [els.toggleStateSummaries, els.toggleSitePoints].forEach((el) => {
   el.addEventListener('change', drawEverything);
 });
@@ -621,6 +785,52 @@ map.on('moveend zoomend', drawEverything);
 if (els.toggleTrails) {
   els.toggleTrails.addEventListener('change', drawEverything);
 }
+
+map.on('popupopen', (event) => {
+  const root = event.popup.getElement();
+  if (!root || !model.draftMarker) return;
+  const copyBtn = root.querySelector('[data-copy-draft]');
+  const clearBtn = root.querySelector('[data-clear-draft]');
+  const preview = root.querySelector('[data-draft-preview]');
+  const fields = root.querySelectorAll('[data-draft-field]');
+
+  const syncDraftFromFields = () => {
+    if (!model.draftMarker) return;
+    const updates = {};
+    fields.forEach((field) => {
+      updates[field.dataset.draftField] = field.value;
+    });
+    const payload = buildDraftPayload(model.draftMarker.getLatLng(), updates);
+    model.draftMarker.draftPayload = payload;
+    if (preview) preview.textContent = JSON.stringify(payload, null, 2);
+  };
+
+  fields.forEach((field) => {
+    field.addEventListener('input', syncDraftFromFields);
+    field.addEventListener('change', syncDraftFromFields);
+  });
+
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async () => {
+      const payload = model.draftMarker?.draftPayload;
+      if (!payload) return;
+      const text = JSON.stringify(payload, null, 2);
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus('Draft JSON copied to clipboard.');
+      } catch (err) {
+        setStatus('Clipboard copy failed. Select the JSON in the popup and copy it manually.');
+      }
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      clearDraftMarker();
+      map.closePopup();
+    });
+  }
+});
 
 document.addEventListener('click', (event) => {
   const button = event.target.closest('[data-zoom-state]');
@@ -630,9 +840,14 @@ document.addEventListener('click', (event) => {
   if (bounds) map.fitBounds(bounds.pad(0.15), { padding: [30, 30] });
 });
 
+wireLongPressHandlers();
+
 loadData().catch((error) => {
   console.error(error);
-  els.statusText.textContent = 'Something tripped during load. The build is usable, but check the console and make sure your data files are present.';
+  model.startStatusText = 'Something tripped during load. The build is usable, but check the console and make sure your data files are present.';
+  setStatus(model.startStatusText);
   renderLegend();
+  ensureAddSiteUi();
+  refreshAddUi();
   drawEverything();
 });
