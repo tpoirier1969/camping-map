@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Camping Map" />
+  <meta name="theme-color" content="#1f5131" />
+  <title>Camping Across America</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <button class="icon-btn mobile-only" id="menuBtn" aria-label="Open filters">☰</button>
+        <div>
+          <h1>Camping Across America</h1>
+          <p id="recordCount">Loading sites…</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="icon-btn" id="locateBtn" title="Fit to visible sites">◎</button>
+        <button class="primary-btn" id="addSiteBtn">Add Site</button>
+      </div>
+    </header>
+
+    <aside class="sidebar" id="sidebar">
+      <section class="panel">
+        <label class="field-label" for="searchInput">Search places</label>
+        <input id="searchInput" type="search" placeholder="Campground, boondock, park…" autocomplete="off" />
+      </section>
+      <section class="panel">
+        <div class="panel-title-row">
+          <h2>Layers</h2>
+          <button class="text-btn" id="resetFiltersBtn">Reset</button>
+        </div>
+        <div class="filter-list" id="layerFilters"></div>
+      </section>
+      <section class="panel compact-actions">
+        <h2>Edits</h2>
+        <div class="button-grid">
+          <button class="secondary-btn" id="exportEditsBtn">Export Edits</button>
+          <label class="secondary-btn file-label">Import Edits<input type="file" id="importEditsInput" accept="application/json" hidden /></label>
+          <button class="secondary-btn danger" id="clearEditsBtn">Clear Local Edits</button>
+        </div>
+        <p class="helper-text">Moved pins and new sites are stored in this browser. Export them when you want a portable file.</p>
+      </section>
+      <section class="panel legend-panel">
+        <h2>What you’re seeing</h2>
+        <ul class="legend-list">
+          <li><span class="legend-dot boondocking"></span> Boondocking</li>
+          <li><span class="legend-dot public"></span> State / county / town campgrounds</li>
+          <li><span class="legend-dot federal"></span> Federal lands</li>
+          <li><span class="legend-dot private"></span> Private campgrounds</li>
+          <li><span class="legend-dot info"></span> Info / reference / places to see</li>
+        </ul>
+      </section>
+    </aside>
+
+    <main class="map-wrap">
+      <div id="map"></div>
+      <div class="mobile-chips" id="mobileChips"></div>
+      <button class="floating-btn" id="floatingAddBtn" aria-label="Add Site">＋</button>
+    </main>
+
+    <section class="bottom-sheet" id="bottomSheet" aria-live="polite">
+      <div class="sheet-handle"></div>
+      <div class="sheet-content" id="sheetContent">
+        <div class="empty-state"><h2>Ready to roam</h2><p>Tap a pin to see details, move it, or open its notes.</p></div>
+      </div>
+    </section>
+  </div>
+
+  <template id="siteTemplate">
+    <article class="site-card">
+      <div class="card-header">
+        <div>
+          <div class="eyebrow" data-field="category"></div>
+          <h2 data-field="name"></h2>
+          <p class="source-line" data-field="sourceLayer"></p>
+        </div>
+        <div class="card-actions">
+          <button class="secondary-btn small" data-action="move">Move Site</button>
+          <button class="secondary-btn small" data-action="copy">Copy Coords</button>
+        </div>
+      </div>
+      <dl class="coord-grid">
+        <div><dt>Latitude</dt><dd data-field="lat"></dd></div>
+        <div><dt>Longitude</dt><dd data-field="lng"></dd></div>
+      </dl>
+      <div class="description" data-field="description"></div>
+    </article>
+  </template>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
