@@ -20,33 +20,37 @@
     <aside id="menuPanel" class="is-open">
       <div class="panel-header">
         <div>
-          <h1>Camping Map <span id="versionTag">v16.0</span></h1>
+          <h1>Camping Map <span id="versionTag">v17.0</span></h1>
           <p id="statusText">Loading map data…</p>
         </div>
         <button id="closeMenu" class="ghost-button" aria-label="Close menu">✕</button>
       </div>
 
       <section class="panel-section">
-        <h2>Display</h2>
-        <label class="switch-row"><input type="checkbox" id="toggleStateSummaries" checked> State summary circles</label>
-        <label class="switch-row"><input type="checkbox" id="toggleSitePoints" checked> Individual campsite points</label>
-        <label class="switch-row"><input type="checkbox" id="toggleTrails" checked> Trails layer</label>
+        <h2>Display behavior</h2>
+        <label class="switch-row"><input type="checkbox" id="toggleStateSummaries" checked> State summary circles when zoomed out</label>
+        <label class="switch-row"><input type="checkbox" id="toggleSitePoints" checked> Individual campsite points when zoomed in</label>
       </section>
 
       <section class="panel-section">
-        <h2>What the zoom does</h2>
-        <p>When the map is zoomed out, the app shows one circle per state. When a state mostly fills the view, or you zoom in far enough, it breaks back out into individual campsites.</p>
+        <h2>Campsite layers</h2>
+        <div id="layerToggleList" class="toggle-list"></div>
+      </section>
+
+      <section class="panel-section" id="trailSection" hidden>
+        <h2>Trails</h2>
+        <label class="switch-row"><input type="checkbox" id="toggleTrails" checked> Show labeled trail overlays</label>
+        <p id="trailStatusText">Trails loaded.</p>
+      </section>
+
+      <section class="panel-section">
+        <h2>How zoom works now</h2>
+        <p>Zoomed out, you get one summary circle per state. When you zoom in enough, or a state mostly fills the screen, the enabled campsite layers break back out into individual points.</p>
       </section>
 
       <section class="panel-section">
         <h2>Legend</h2>
-        <div class="legend-list">
-          <div><span class="legend-dot modern"></span> Modern</div>
-          <div><span class="legend-dot rustic"></span> Rustic</div>
-          <div><span class="legend-dot boondocking"></span> Boondocking / dispersed</div>
-          <div><span class="legend-line trail"></span> Trail</div>
-          <div><span class="legend-dot state"></span> State summary</div>
-        </div>
+        <div id="legendList" class="legend-list"></div>
       </section>
 
       <section class="panel-section" id="countsPanel">

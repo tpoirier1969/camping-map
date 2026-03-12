@@ -1,9 +1,8 @@
 {
   "name": "Camping Map",
-  "short_name": "CampingMap",
+  "short_name": "Camping Map",
   "display": "standalone",
   "background_color": "#0e1a16",
   "theme_color": "#133b2c",
-  "start_url": "./index.html",
-  "icons": []
+  "start_url": "./index.html"
 }

@@ -54,7 +54,7 @@ body {
   position: fixed;
   top: max(84px, calc(env(safe-area-inset-top) + 72px)) !important;
   left: 12px;
-  width: min(360px, calc(100vw - 24px));
+  width: min(380px, calc(100vw - 24px));
   max-height: calc(100dvh - max(96px, calc(env(safe-area-inset-top) + 84px)) - 12px);
   overflow: auto;
   z-index: 99998 !important;
@@ -120,6 +120,11 @@ body {
   line-height: 1.45;
 }
 
+.toggle-list {
+  display: grid;
+  gap: 8px;
+}
+
 .switch-row {
   display: flex;
   align-items: center;
@@ -138,11 +143,16 @@ body {
   color: var(--muted);
 }
 
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .legend-dot,
 .legend-line {
   display: inline-block;
   vertical-align: middle;
-  margin-right: 8px;
 }
 
 .legend-dot {
@@ -150,16 +160,15 @@ body {
   height: 12px;
   border-radius: 999px;
   border: 1px solid rgba(0,0,0,0.35);
+  flex: 0 0 auto;
 }
 
-.legend-dot.modern { background: #2a7fff; }
-.legend-dot.rustic { background: #a46a24; }
-.legend-dot.boondocking { background: #3f8c53; }
-.legend-dot.state { background: #7f4dff; }
-.legend-line.trail {
+.legend-line {
   width: 18px;
   height: 0;
-  border-top: 3px solid #ff7a00;
+  border-top-width: 3px;
+  border-top-style: solid;
+  flex: 0 0 auto;
 }
 
 .counts-grid {
@@ -238,6 +247,15 @@ body {
   padding: 3px 8px;
   font-weight: 700;
   box-shadow: var(--shadow);
+}
+
+.trail-label {
+  color: #fff;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 @media (max-width: 700px) {

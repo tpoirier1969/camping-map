@@ -1,16 +1,25 @@
-const VERSION = 'v16.0';
+const VERSION = 'v17.0';
 const DEFAULT_CENTER = [46.6, -87.4];
 const DEFAULT_ZOOM = 6;
 const DETAIL_ZOOM = 7;
 const STATE_PADDING_FACTOR = 0.18;
+const TRAIL_URLS = [
+  'data/trails.geojson',
+  'trails.geojson'
+];
 
-const CATEGORY_STYLES = {
-  modern: { color: '#2a7fff', fillColor: '#2a7fff', radius: 5 },
-  rustic: { color: '#a46a24', fillColor: '#a46a24', radius: 5 },
-  boondocking: { color: '#3f8c53', fillColor: '#3f8c53', radius: 5 },
-  dispersed: { color: '#3f8c53', fillColor: '#3f8c53', radius: 5 },
-  trailhead: { color: '#9b59b6', fillColor: '#9b59b6', radius: 5 },
-  default: { color: '#d4d4d4', fillColor: '#d4d4d4', radius: 5 }
+const BUILTIN_BUCKETS = {
+  modern: { label: 'Modern', color: '#2a7fff', radius: 5 },
+  rustic: { label: 'Rustic', color: '#a46a24', radius: 5 },
+  boondocking: { label: 'Boondocking / dispersed', color: '#3f8c53', radius: 5 },
+  private: { label: 'Private campgrounds', color: '#cf4f7d', radius: 5 },
+  national_forest: { label: 'National forest campgrounds', color: '#1f8a70', radius: 5 },
+  state_federal_modern: { label: 'State / federal modern campgrounds', color: '#2a7fff', radius: 5 },
+  state_federal_rustic: { label: 'State / federal rustic campgrounds', color: '#a46a24', radius: 5 },
+  trailhead: { label: 'Trailheads', color: '#8e5bd6', radius: 5 },
+  other: { label: 'Other campsites', color: '#949494', radius: 5 },
+  state_summary: { label: 'State summary', color: '#7f4dff', radius: 12 },
+  trail: { label: 'Trail', color: '#ff7a00', radius: 0 }
 };
 
 const map = L.map('map', {
@@ -25,7 +34,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 const siteLayer = L.layerGroup().addTo(map);
 const stateLayer = L.layerGroup().addTo(map);
-const trailLayer = L.layerGroup().addTo(map);
+const trailLayer = L.layerGroup();
 
 const els = {
   menuToggle: document.getElementById('menuToggle'),
@@ -36,6 +45,10 @@ const els = {
   toggleStateSummaries: document.getElementById('toggleStateSummaries'),
   toggleSitePoints: document.getElementById('toggleSitePoints'),
   toggleTrails: document.getElementById('toggleTrails'),
+  trailSection: document.getElementById('trailSection'),
+  trailStatusText: document.getElementById('trailStatusText'),
+  layerToggleList: document.getElementById('layerToggleList'),
+  legendList: document.getElementById('legendList'),
   versionTag: document.getElementById('versionTag')
 };
 
@@ -53,16 +66,19 @@ const model = {
   sites: [],
   trails: null,
   stateGroups: new Map(),
-  stateBBoxes: new Map()
+  stateBBoxes: new Map(),
+  layerDefs: new Map(),
+  layerState: new Map()
 };
 
 function normalizeCategory(rawCategory = '') {
   const value = String(rawCategory).trim().toLowerCase();
-  if (!value) return 'default';
+  if (!value) return 'other';
   if (value.includes('boondock') || value.includes('dispersed')) return 'boondocking';
   if (value.includes('rustic')) return 'rustic';
   if (value.includes('modern')) return 'modern';
   if (value.includes('trailhead')) return 'trailhead';
+  if (value.includes('private')) return 'private';
   return value;
 }
 
@@ -71,10 +87,109 @@ function getLatLng(raw) {
     const [lng, lat] = raw.coordinates;
     if (Number.isFinite(lat) && Number.isFinite(lng)) return [Number(lat), Number(lng)];
   }
+
+  if (Array.isArray(raw?.geometry?.coordinates) && raw.geometry.coordinates.length >= 2) {
+    const [lng, lat] = raw.geometry.coordinates;
+    if (Number.isFinite(lat) && Number.isFinite(lng)) return [Number(lat), Number(lng)];
+  }
+
   const lat = Number(raw.lat ?? raw.latitude ?? raw.y);
   const lng = Number(raw.lng ?? raw.lon ?? raw.longitude ?? raw.x);
   if (Number.isFinite(lat) && Number.isFinite(lng)) return [lat, lng];
   return null;
+}
+
+function cleanLabel(value) {
+  return String(value || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function titleCase(value) {
+  return cleanLabel(value).replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function makeSlug(value) {
+  return cleanLabel(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+function hashColor(text) {
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(i);
+    hash |= 0;
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue} 60% 52%)`;
+}
+
+function deriveLayerInfo(raw, category) {
+  const layerish = raw.layerLabel || raw.layer_name || raw.layerName || raw.layer || raw.mapLayer || raw.group || raw.collection || '';
+  const ownerText = cleanLabel(raw.owner || raw.ownership || raw.manager || raw.agency || raw.system || raw.landManager || '').toLowerCase();
+  const typeText = cleanLabel(raw.type || raw.kind || raw.category || raw.classification || '').toLowerCase();
+  const combined = `${layerish} ${ownerText} ${typeText}`.trim();
+
+  if (layerish) {
+    return {
+      key: makeSlug(layerish) || `layer-${category}`,
+      label: titleCase(layerish),
+      bucket: categoryFromText(combined, category)
+    };
+  }
+
+  if (ownerText.includes('private')) {
+    return { key: 'private-campgrounds', label: 'Private Campgrounds', bucket: 'private' };
+  }
+
+  if ((ownerText.includes('state') || ownerText.includes('federal') || ownerText.includes('national')) && category === 'modern') {
+    return { key: 'state-federal-modern-campgrounds', label: 'State / Federal Campgrounds - Modern', bucket: 'state_federal_modern' };
+  }
+
+  if ((ownerText.includes('state') || ownerText.includes('federal') || ownerText.includes('national')) && category === 'rustic') {
+    return { key: 'state-federal-rustic-campgrounds', label: 'State / Federal Campgrounds - Rustic', bucket: 'state_federal_rustic' };
+  }
+
+  if (combined.includes('national forest')) {
+    return { key: 'national-forest-campgrounds', label: 'National Forest Campgrounds', bucket: 'national_forest' };
+  }
+
+  if (category === 'boondocking') {
+    return { key: 'boondocking', label: 'Boondocking', bucket: 'boondocking' };
+  }
+  if (category === 'modern') {
+    return { key: 'modern-campgrounds', label: 'Modern Campgrounds', bucket: 'modern' };
+  }
+  if (category === 'rustic') {
+    return { key: 'rustic-campgrounds', label: 'Rustic Campgrounds', bucket: 'rustic' };
+  }
+  if (category === 'private') {
+    return { key: 'private-campgrounds', label: 'Private Campgrounds', bucket: 'private' };
+  }
+  if (category === 'trailhead') {
+    return { key: 'trailheads', label: 'Trailheads', bucket: 'trailhead' };
+  }
+
+  return {
+    key: category ? `${makeSlug(category)}-sites` : 'other-sites',
+    label: category ? `${titleCase(category)} Sites` : 'Other Campsites',
+    bucket: categoryFromText(combined, category)
+  };
+}
+
+function categoryFromText(text, fallback = 'other') {
+  const value = String(text || '').toLowerCase();
+  if (value.includes('boondock') || value.includes('dispersed')) return 'boondocking';
+  if (value.includes('national forest')) return 'national_forest';
+  if (value.includes('state') && value.includes('modern')) return 'state_federal_modern';
+  if (value.includes('federal') && value.includes('modern')) return 'state_federal_modern';
+  if (value.includes('state') && value.includes('rustic')) return 'state_federal_rustic';
+  if (value.includes('federal') && value.includes('rustic')) return 'state_federal_rustic';
+  if (value.includes('private')) return 'private';
+  if (value.includes('modern')) return 'modern';
+  if (value.includes('rustic')) return 'rustic';
+  if (value.includes('trailhead')) return 'trailhead';
+  return BUILTIN_BUCKETS[fallback] ? fallback : 'other';
 }
 
 function normalizeSite(raw, idx) {
@@ -82,7 +197,8 @@ function normalizeSite(raw, idx) {
   if (!latlng) return null;
 
   const state = raw.state || raw.stateAbbr || raw.state_abbr || raw.region || raw.province || raw.admin1 || 'Unknown';
-  const category = normalizeCategory(raw.category || raw.type || raw.layer || raw.kind);
+  const category = normalizeCategory(raw.category || raw.type || raw.kind || raw.layer || raw.classification);
+  const layerInfo = deriveLayerInfo(raw, category);
   const website = raw.website || raw.url || raw.link || raw.official_url || '';
   const navigateUrl = `https://www.google.com/maps?q=${latlng[0]},${latlng[1]}`;
 
@@ -91,6 +207,9 @@ function normalizeSite(raw, idx) {
     name: raw.name || raw.title || raw.site || raw.label || `Untitled site ${idx + 1}`,
     state: String(state).trim() || 'Unknown',
     category,
+    layerKey: layerInfo.key,
+    layerLabel: layerInfo.label,
+    bucket: layerInfo.bucket,
     description: raw.description || raw.notes || raw.summary || '',
     website,
     navigateUrl,
@@ -115,6 +234,20 @@ async function loadFirstAvailable(urls) {
   return null;
 }
 
+function normalizeSiteArray(sitesRaw) {
+  return Array.isArray(sitesRaw)
+    ? sitesRaw
+    : Array.isArray(sitesRaw?.sites)
+      ? sitesRaw.sites
+      : Array.isArray(sitesRaw?.features)
+        ? sitesRaw.features.map((feature) => ({
+            ...(feature.properties || {}),
+            geometry: feature.geometry,
+            coordinates: feature.geometry?.coordinates
+          }))
+        : [];
+}
+
 async function loadData() {
   const sitesRaw = await loadFirstAvailable([
     'data/sites.json',
@@ -123,35 +256,51 @@ async function loadData() {
     'sites.json'
   ]);
 
-  const trailRaw = await loadFirstAvailable([
-    'data/trails.geojson',
-    'trails.geojson'
-  ]);
+  const trailRaw = await loadFirstAvailable(TRAIL_URLS);
 
-  const siteArray = Array.isArray(sitesRaw)
-    ? sitesRaw
-    : Array.isArray(sitesRaw?.sites)
-      ? sitesRaw.sites
-      : Array.isArray(sitesRaw?.features)
-        ? sitesRaw.features.map((f) => ({
-            ...(f.properties || {}),
-            coordinates: f.geometry?.coordinates
-          }))
-        : [];
+  model.sites = normalizeSiteArray(sitesRaw).map(normalizeSite).filter(Boolean);
+  model.trails = trailRaw?.features?.length ? trailRaw : null;
 
-  model.sites = siteArray.map(normalizeSite).filter(Boolean);
-  model.trails = trailRaw;
+  buildLayerDefinitions();
   buildStateGroups();
+  renderLayerControls();
+  renderLegend();
+  syncTrailUi();
   drawEverything();
 
-  const msg = model.sites.length
-    ? `Loaded ${model.sites.length} campsites and ${countTrailFeatures()} trail overlay(s).`
-    : 'No campsite file was found. The build is ready, but keep your existing sites.json in place.';
-  els.statusText.textContent = msg;
+  const siteMsg = model.sites.length
+    ? `Loaded ${model.sites.length} campsites across ${model.layerDefs.size} visible layer${model.layerDefs.size === 1 ? '' : 's'}.`
+    : 'No campsite file was found. Keep your existing sites.json in place.';
+
+  if (model.trails?.features?.length) {
+    els.statusText.textContent = `${siteMsg} Labeled trail overlays are available.`;
+  } else {
+    els.statusText.textContent = `${siteMsg} Trail overlay removed from this package until accurate geometry is available.`;
+  }
 }
 
-function countTrailFeatures() {
-  return Array.isArray(model.trails?.features) ? model.trails.features.length : 0;
+function buildLayerDefinitions() {
+  model.layerDefs.clear();
+  model.layerState.clear();
+
+  for (const site of model.sites) {
+    if (!model.layerDefs.has(site.layerKey)) {
+      const bucketStyle = BUILTIN_BUCKETS[site.bucket] || BUILTIN_BUCKETS.other;
+      const color = bucketStyle.color || hashColor(site.layerKey);
+      model.layerDefs.set(site.layerKey, {
+        key: site.layerKey,
+        label: site.layerLabel,
+        bucket: site.bucket,
+        color,
+        radius: bucketStyle.radius || 5,
+        checked: true
+      });
+      model.layerState.set(site.layerKey, true);
+    }
+  }
+
+  const sorted = [...model.layerDefs.values()].sort((a, b) => a.label.localeCompare(b.label));
+  model.layerDefs = new Map(sorted.map((def) => [def.key, def]));
 }
 
 function buildStateGroups() {
@@ -174,6 +323,63 @@ function buildStateGroups() {
     );
     model.stateBBoxes.set(state, bounds);
   }
+}
+
+function renderLayerControls() {
+  if (!model.layerDefs.size) {
+    els.layerToggleList.innerHTML = '<p>No campsite layers were detected yet.</p>';
+    return;
+  }
+
+  els.layerToggleList.innerHTML = '';
+  for (const def of model.layerDefs.values()) {
+    const row = document.createElement('label');
+    row.className = 'switch-row';
+    row.innerHTML = `
+      <input type="checkbox" data-layer-key="${escapeAttribute(def.key)}" ${model.layerState.get(def.key) ? 'checked' : ''}>
+      <span class="legend-dot" style="background:${escapeAttribute(def.color)}"></span>
+      <span>${escapeHtml(def.label)}</span>
+    `;
+    els.layerToggleList.appendChild(row);
+  }
+
+  els.layerToggleList.querySelectorAll('input[data-layer-key]').forEach((input) => {
+    input.addEventListener('change', () => {
+      model.layerState.set(input.dataset.layerKey, input.checked);
+      drawEverything();
+    });
+  });
+}
+
+function renderLegend() {
+  const items = [];
+  items.push({ type: 'dot', label: 'State summary', color: BUILTIN_BUCKETS.state_summary.color });
+  for (const def of model.layerDefs.values()) {
+    items.push({ type: 'dot', label: def.label, color: def.color });
+  }
+  if (model.trails?.features?.length) {
+    items.push({ type: 'line', label: 'Trail overlay', color: BUILTIN_BUCKETS.trail.color });
+  }
+
+  els.legendList.innerHTML = items.map((item) => `
+    <div class="legend-item">
+      ${item.type === 'line'
+        ? `<span class="legend-line" style="border-top-color:${escapeAttribute(item.color)}"></span>`
+        : `<span class="legend-dot" style="background:${escapeAttribute(item.color)}"></span>`}
+      <span>${escapeHtml(item.label)}</span>
+    </div>
+  `).join('');
+}
+
+function syncTrailUi() {
+  const hasTrails = Boolean(model.trails?.features?.length);
+  els.trailSection.hidden = !hasTrails;
+  if (!hasTrails) {
+    if (trailLayer && map.hasLayer(trailLayer)) map.removeLayer(trailLayer);
+    return;
+  }
+  trailLayer.addTo(map);
+  els.trailStatusText.textContent = 'Accurate labeled trail data loaded.';
 }
 
 function getPaddedBounds(bounds, factor = STATE_PADDING_FACTOR) {
@@ -203,6 +409,14 @@ function shouldShowSiteDetails() {
   return map.getZoom() >= DETAIL_ZOOM || Boolean(singleState);
 }
 
+function isLayerEnabled(layerKey) {
+  return model.layerState.get(layerKey) !== false;
+}
+
+function getEnabledSites() {
+  return model.sites.filter((site) => isLayerEnabled(site.layerKey));
+}
+
 function popupHtmlForSite(site) {
   const parts = [];
   if (site.access) parts.push(`<div><strong>Access:</strong> ${escapeHtml(site.access)}</div>`);
@@ -213,7 +427,7 @@ function popupHtmlForSite(site) {
   return `
     <div class="popup-content">
       <div class="popup-title">${escapeHtml(site.name)}</div>
-      <div class="popup-meta">${escapeHtml(site.state)} · ${escapeHtml(site.category)}</div>
+      <div class="popup-meta">${escapeHtml(site.state)} · ${escapeHtml(site.layerLabel)}</div>
       ${parts.join('')}
       <div class="popup-actions">
         <a href="${site.navigateUrl}" target="_blank" rel="noopener noreferrer">Navigate</a>
@@ -224,14 +438,21 @@ function popupHtmlForSite(site) {
 }
 
 function popupHtmlForState(state, sites) {
-  const counts = countByCategory(sites);
+  const counts = countByLayer(sites);
+  const topCounts = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([layerKey, count]) => {
+      const def = model.layerDefs.get(layerKey);
+      return `<div>${escapeHtml(def?.label || layerKey)}: ${count}</div>`;
+    })
+    .join('');
+
   return `
     <div class="popup-content">
       <div class="popup-title">${escapeHtml(state)}</div>
-      <div class="popup-meta">${sites.length} campsite point${sites.length === 1 ? '' : 's'} in this state</div>
-      <div>Modern: ${counts.modern || 0}</div>
-      <div>Rustic: ${counts.rustic || 0}</div>
-      <div>Boondocking: ${counts.boondocking || 0}</div>
+      <div class="popup-meta">${sites.length} enabled campsite point${sites.length === 1 ? '' : 's'} in this state</div>
+      ${topCounts || '<div>No enabled layers in this state.</div>'}
       <div class="popup-actions">
         <button type="button" data-zoom-state="${escapeAttribute(state)}">Zoom to state</button>
       </div>
@@ -239,126 +460,144 @@ function popupHtmlForState(state, sites) {
   `;
 }
 
-function countByCategory(items) {
+function countByLayer(items) {
   return items.reduce((acc, item) => {
-    const cat = item.category || 'default';
-    acc[cat] = (acc[cat] || 0) + 1;
+    acc[item.layerKey] = (acc[item.layerKey] || 0) + 1;
     return acc;
   }, {});
 }
 
 function drawSites() {
   siteLayer.clearLayers();
-  if (!els.toggleSitePoints.checked || !shouldShowSiteDetails()) return;
+  if (!els.toggleSitePoints.checked || !shouldShowSiteDetails()) return { visibleSites: 0, visibleByLayer: {} };
 
   const visibleBounds = map.getBounds().pad(0.2);
+  const enabledSites = getEnabledSites();
   let visibleSites = 0;
-  const visibleCategories = { modern: 0, rustic: 0, boondocking: 0, other: 0 };
+  const visibleByLayer = {};
 
-  for (const site of model.sites) {
+  for (const site of enabledSites) {
     const ll = L.latLng(site.latlng[0], site.latlng[1]);
     if (!visibleBounds.contains(ll)) continue;
-    const style = CATEGORY_STYLES[site.category] || CATEGORY_STYLES.default;
+    const style = model.layerDefs.get(site.layerKey) || { color: BUILTIN_BUCKETS.other.color, radius: 5 };
     L.circleMarker(ll, {
-      radius: style.radius,
+      radius: style.radius || 5,
       color: style.color,
-      fillColor: style.fillColor,
+      fillColor: style.color,
       fillOpacity: 0.9,
       weight: 1
     }).bindPopup(popupHtmlForSite(site)).addTo(siteLayer);
 
     visibleSites += 1;
-    if (site.category in visibleCategories) visibleCategories[site.category] += 1;
-    else visibleCategories.other += 1;
+    visibleByLayer[site.layerKey] = (visibleByLayer[site.layerKey] || 0) + 1;
   }
 
-  return { visibleSites, visibleCategories };
+  return { visibleSites, visibleByLayer };
 }
 
 function drawStateSummaries() {
   stateLayer.clearLayers();
-  if (!els.toggleStateSummaries.checked || shouldShowSiteDetails()) return;
+  if (!els.toggleStateSummaries.checked || shouldShowSiteDetails()) return { visibleStates: 0, representedSites: 0 };
 
-  for (const [state, sites] of model.stateGroups.entries()) {
+  const enabledSites = getEnabledSites();
+  const enabledStateGroups = new Map();
+  for (const site of enabledSites) {
+    if (!enabledStateGroups.has(site.state)) enabledStateGroups.set(site.state, []);
+    enabledStateGroups.get(site.state).push(site);
+  }
+
+  let visibleStates = 0;
+  let representedSites = 0;
+
+  for (const [state, sites] of enabledStateGroups.entries()) {
+    if (!sites.length) continue;
     const lat = sites.reduce((sum, s) => sum + s.latlng[0], 0) / sites.length;
     const lng = sites.reduce((sum, s) => sum + s.latlng[1], 0) / sites.length;
 
     const marker = L.circleMarker([lat, lng], {
-      radius: 12,
-      color: '#7f4dff',
-      fillColor: '#7f4dff',
+      radius: BUILTIN_BUCKETS.state_summary.radius,
+      color: BUILTIN_BUCKETS.state_summary.color,
+      fillColor: BUILTIN_BUCKETS.state_summary.color,
       fillOpacity: 0.85,
       weight: 1
     }).bindPopup(popupHtmlForState(state, sites));
 
     marker.addTo(stateLayer);
 
-    const label = L.marker([lat, lng], {
+    L.marker([lat, lng], {
       interactive: false,
       icon: L.divIcon({
         className: 'state-summary-label',
         html: `${escapeHtml(state)} · ${sites.length}`
       })
-    });
-    label.addTo(stateLayer);
+    }).addTo(stateLayer);
+
+    visibleStates += 1;
+    representedSites += sites.length;
   }
+
+  return { visibleStates, representedSites };
 }
 
 function drawTrails() {
   trailLayer.clearLayers();
-  if (!els.toggleTrails.checked || !model.trails?.features) return;
+  if (!model.trails?.features?.length || els.trailSection.hidden || !els.toggleTrails.checked) return;
 
   const geoJson = L.geoJSON(model.trails, {
     style: () => ({
-      color: '#ff7a00',
+      color: BUILTIN_BUCKETS.trail.color,
       weight: 3,
       opacity: 0.9
     }),
     onEachFeature: (feature, layer) => {
       const p = feature.properties || {};
+      const name = p.name || p.title || 'Trail';
+      const note = p.note || p.description || 'Trail overlay';
       const url = p.url ? `<div><a href="${escapeAttribute(p.url)}" target="_blank" rel="noopener noreferrer">More info</a></div>` : '';
       layer.bindPopup(`
         <div class="popup-content">
-          <div class="popup-title">${escapeHtml(p.name || 'Trail')}</div>
-          <div class="popup-meta">${escapeHtml(p.note || 'Trail overlay')}</div>
+          <div class="popup-title">${escapeHtml(name)}</div>
+          <div class="popup-meta">${escapeHtml(note)}</div>
           ${url}
         </div>
       `);
+      layer.bindTooltip(name, {
+        permanent: true,
+        direction: 'center',
+        className: 'trail-label'
+      });
     }
   });
   geoJson.addTo(trailLayer);
 }
 
-function updateCounts(siteDrawInfo) {
+function updateCounts(siteDrawInfo, stateDrawInfo) {
   const mode = shouldShowSiteDetails() ? 'individual sites' : 'state summaries';
   const focusedState = focusedOnSingleState();
-  const summaryCounts = {
-    modern: 0,
-    rustic: 0,
-    boondocking: 0,
-    other: 0,
-    trails: countTrailFeatures()
-  };
-
-  if (siteDrawInfo?.visibleCategories) {
-    Object.assign(summaryCounts, siteDrawInfo.visibleCategories, { trails: countTrailFeatures() });
-  }
+  const layerCountCards = [...model.layerDefs.values()].slice(0, 8).map((def) => {
+    const visibleCount = siteDrawInfo?.visibleByLayer?.[def.key] || 0;
+    return `
+      <div class="count-card">
+        <strong>${visibleCount}</strong>
+        <span>${escapeHtml(def.label)}</span>
+      </div>
+    `;
+  }).join('');
 
   els.countsGrid.innerHTML = `
     <div class="count-card"><strong>${mode}</strong><span>${focusedState ? `Focused on ${escapeHtml(focusedState)}` : 'Zoom changes when points break out'}</span></div>
-    <div class="count-card"><strong>${siteDrawInfo?.visibleSites ?? model.sites.length}</strong><span>${shouldShowSiteDetails() ? 'Visible site points' : 'Total sites in data file'}</span></div>
-    <div class="count-card"><strong>${summaryCounts.modern || 0}</strong><span>Modern visible</span></div>
-    <div class="count-card"><strong>${summaryCounts.rustic || 0}</strong><span>Rustic visible</span></div>
-    <div class="count-card"><strong>${summaryCounts.boondocking || 0}</strong><span>Boondocking visible</span></div>
-    <div class="count-card"><strong>${summaryCounts.trails || 0}</strong><span>Trail overlays</span></div>
+    <div class="count-card"><strong>${siteDrawInfo?.visibleSites ?? 0}</strong><span>${shouldShowSiteDetails() ? 'Visible site points' : 'Visible site points hidden while summarized'}</span></div>
+    <div class="count-card"><strong>${stateDrawInfo?.visibleStates ?? 0}</strong><span>Visible state summaries</span></div>
+    <div class="count-card"><strong>${getEnabledSites().length}</strong><span>Enabled sites total</span></div>
+    ${layerCountCards}
   `;
 }
 
 function drawEverything() {
   const siteDrawInfo = drawSites();
-  drawStateSummaries();
+  const stateDrawInfo = drawStateSummaries();
   drawTrails();
-  updateCounts(siteDrawInfo);
+  updateCounts(siteDrawInfo, stateDrawInfo);
 }
 
 function escapeHtml(value) {
@@ -375,9 +614,13 @@ function escapeAttribute(value) {
 }
 
 map.on('moveend zoomend', drawEverything);
-[els.toggleStateSummaries, els.toggleSitePoints, els.toggleTrails].forEach((el) => {
+[els.toggleStateSummaries, els.toggleSitePoints].forEach((el) => {
   el.addEventListener('change', drawEverything);
 });
+
+if (els.toggleTrails) {
+  els.toggleTrails.addEventListener('change', drawEverything);
+}
 
 document.addEventListener('click', (event) => {
   const button = event.target.closest('[data-zoom-state]');
@@ -390,5 +633,6 @@ document.addEventListener('click', (event) => {
 loadData().catch((error) => {
   console.error(error);
   els.statusText.textContent = 'Something tripped during load. The build is usable, but check the console and make sure your data files are present.';
+  renderLegend();
   drawEverything();
 });
