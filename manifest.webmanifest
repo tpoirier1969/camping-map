@@ -1,21 +1,9 @@
 {
   "name": "Camping Map",
-  "short_name": "Camping Map",
-  "description": "A mobile-friendly camping map with local edits.",
-  "start_url": "./index.html",
+  "short_name": "CampingMap",
   "display": "standalone",
-  "background_color": "#efe4cf",
-  "theme_color": "#4f6b3c",
-  "icons": [
-    {
-      "src": "icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
+  "background_color": "#0e1a16",
+  "theme_color": "#133b2c",
+  "start_url": "./index.html",
+  "icons": []
 }
