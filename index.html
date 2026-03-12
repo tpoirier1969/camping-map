@@ -1,156 +1,156 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Camping Across America</title>
-  <meta name="theme-color" content="#355e3b" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Camping Map" />
-  <meta name="description" content="A responsive camping map for boondocking, public, federal, private, and reference points." />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <link rel="icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Camping Map</title>
+  <meta name="theme-color" content="#4f6b3c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Camping Map">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="app-shell">
-    <header class="topbar compact-topbar">
+  <div id="app">
+    <header class="topbar">
       <div class="brand-wrap">
-        <div class="brand-kicker">Camping Across America</div>
-        <h1>Camp, roam, and fix the pins that wandered off.</h1>
+        <button id="menuToggle" class="icon-btn" aria-label="Open menu">☰</button>
+        <div class="brand-block">
+          <div class="brand-title">Camping Map</div>
+          <div class="brand-subtitle">Country-wide base map with local edits</div>
+        </div>
       </div>
-      <div class="top-actions compact-actions">
-        <button id="menuBtn" class="btn btn-ghost" type="button" aria-expanded="false" aria-controls="toolbarPanel">Menu</button>
-        <button id="installBtn" class="btn btn-primary hidden" type="button">Add to Home Screen</button>
+      <div class="search-wrap">
+        <input id="searchInput" type="search" placeholder="Search sites, notes, layers…">
       </div>
     </header>
 
-    <section class="toolbar toolbar-collapsible" id="toolbarPanel">
-      <label class="search-wrap">
-        <span class="sr-only">Search sites</span>
-        <input id="searchInput" type="search" placeholder="Search campsites, boondocking, parks..." />
-      </label>
-      <div class="chip-row" id="layerChips"></div>
-      <div class="toolbar-actions">
-        <button id="addSiteBtn" class="btn btn-primary" type="button">Add Site</button>
-        <button id="manageEditsBtn" class="btn btn-ghost" type="button">Manage Edits</button>
+    <aside id="menuPanel" class="menu-panel open">
+      <section class="menu-section">
+        <div class="menu-heading">Layers</div>
+        <label class="layer-chip chip-boondocking"><input type="checkbox" data-layer="boondocking" checked> Boondocking</label>
+        <label class="layer-chip chip-public"><input type="checkbox" data-layer="public" checked> State / County / Town</label>
+        <label class="layer-chip chip-federal"><input type="checkbox" data-layer="federal" checked> Federal Lands</label>
+        <label class="layer-chip chip-private"><input type="checkbox" data-layer="private" checked> Private Campgrounds</label>
+        <label class="layer-chip chip-info"><input type="checkbox" data-layer="info" checked> Info / Reference</label>
+      </section>
+
+      <section class="menu-section">
+        <div class="menu-heading">Edits</div>
+        <button id="manageEditsBtn" class="menu-btn">Manage Local Edits</button>
+        <label class="import-label menu-btn">
+          Import Local Edits
+          <input id="importEditsInput" type="file" accept="application/json" hidden>
+        </label>
+      </section>
+
+      <section class="menu-section compact-copy">
+        <div class="menu-heading">How to edit</div>
+        <p>Desktop: right-click the map to add a site.</p>
+        <p>Phone: double-tap the map to add a site.</p>
+        <p>To move a site, open its details and tap <strong>Move Site</strong>.</p>
+      </section>
+    </aside>
+
+    <main id="map"></main>
+
+    <section id="sitePanel" class="site-panel hidden collapsed" aria-label="Site details">
+      <div id="sitePanelHandle" class="site-panel-handle">
+        <span class="grabber"></span>
+        <div class="site-panel-actions">
+          <button id="collapseSitePanelBtn" class="tiny-btn" aria-label="Minimize site details">▁</button>
+          <button id="closeSitePanelBtn" class="tiny-btn" aria-label="Close site details">✕</button>
+        </div>
+      </div>
+      <div id="sitePanelContent" class="site-panel-content">
+        <div class="empty-panel">Tap a site marker to see details.</div>
       </div>
     </section>
 
-    <main class="main-grid">
-      <section class="map-panel">
-        <div id="map"></div>
-        <div class="map-fabs">
-          <button id="locateBtn" class="fab mini-fab" type="button" aria-label="Locate me" title="Locate me">⌖</button>
-          <button id="recenterBtn" class="fab" type="button" aria-label="Recenter map" title="Recenter map">◎</button>
+    <div id="actionMenu" class="action-menu hidden">
+      <div class="action-title">Map actions</div>
+      <div id="actionCoords" class="action-coords"></div>
+      <button id="addSiteHereBtn" class="menu-btn action-primary">Add Site Here</button>
+      <button id="cancelActionMenuBtn" class="menu-btn">Cancel</button>
+    </div>
+
+    <div id="moveBanner" class="move-banner hidden">
+      <span id="moveBannerText">Tap the new location for this site.</span>
+      <button id="cancelMoveBtn" class="tiny-btn">Cancel Move</button>
+    </div>
+
+    <div id="editModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2 id="editModalTitle">Add Site</h2>
+          <button id="closeEditModalBtn" class="tiny-btn">✕</button>
         </div>
-
-        <aside class="detail-sheet floating-sheet" id="detailSheet" aria-live="polite">
-          <div class="sheet-inner">
-            <div class="sheet-dragbar" id="sheetDragHandle">
-              <div class="sheet-handle"></div>
-              <div class="eyebrow">Site details</div>
-            </div>
-
-            <div class="sheet-header">
-              <div>
-                <h2 id="detailTitle">Pick a marker</h2>
-              </div>
-              <div class="sheet-header-actions">
-                <button id="toggleSheetBtn" class="icon-btn" type="button" aria-label="Expand or shrink details" title="Expand or shrink details">↕</button>
-                <button id="dockSheetBtn" class="icon-btn" type="button" aria-label="Reset panel position" title="Reset panel position">⤢</button>
-                <button id="closeSheetBtn" class="icon-btn" type="button" aria-label="Close details" title="Close details">✕</button>
-              </div>
-            </div>
-
-            <div id="detailMeta" class="detail-meta"></div>
-            <div id="detailBody" class="detail-body">
-              <p>Tap a marker to see details, move a bad pin, or add a new site.</p>
-            </div>
-
-            <div class="detail-actions">
-              <button id="moveSiteBtn" class="btn btn-primary" type="button" disabled>Move Site</button>
-              <button id="copyCoordsBtn" class="btn btn-ghost" type="button" disabled>Copy Coords</button>
-            </div>
+        <form id="siteForm" class="site-form">
+          <label>
+            Site name
+            <input name="name" required>
+          </label>
+          <label>
+            Category
+            <select name="category" required>
+              <option value="boondocking">Boondocking</option>
+              <option value="public">State / County / Town</option>
+              <option value="federal">Federal Lands</option>
+              <option value="private">Private Campgrounds</option>
+              <option value="info">Info / Reference</option>
+            </select>
+          </label>
+          <div class="coord-grid">
+            <label>
+              Latitude
+              <input name="lat" type="number" step="any" required>
+            </label>
+            <label>
+              Longitude
+              <input name="lng" type="number" step="any" required>
+            </label>
           </div>
-        </aside>
-      </section>
-    </main>
-  </div>
-
-  <dialog id="addSiteDialog" class="app-dialog">
-    <form id="addSiteForm" method="dialog" class="dialog-card">
-      <div class="dialog-header">
-        <h2>Add Site</h2>
-        <button id="cancelAddSiteTopBtn" class="icon-btn" type="button" aria-label="Close add site dialog">✕</button>
-      </div>
-
-      <div class="dialog-copy subtle-copy">
-        <p id="addSiteHint">Right-click on desktop or double-tap on the map to drop a site using that spot's coordinates.</p>
-      </div>
-
-      <div class="form-grid">
-        <label>
-          <span>Site name</span>
-          <input name="name" required maxlength="180" placeholder="High Rock Bay" />
-        </label>
-        <label>
-          <span>Layer</span>
-          <select name="layer" required>
-            <option>Boondocking</option>
-            <option>State / County / Town Campgrounds</option>
-            <option>Federal Lands</option>
-            <option>Private Campgrounds</option>
-            <option>Info / Reference</option>
-          </select>
-        </label>
-        <label>
-          <span>Latitude</span>
-          <input name="lat" type="number" step="any" required placeholder="46.7821" />
-        </label>
-        <label>
-          <span>Longitude</span>
-          <input name="lng" type="number" step="any" required placeholder="-88.0204" />
-        </label>
-        <label class="form-span-2">
-          <span>Notes</span>
-          <textarea name="note" rows="4" placeholder="Access notes, fee, trail, website, whatever matters."></textarea>
-        </label>
-      </div>
-
-      <div class="dialog-actions">
-        <button id="cancelAddSiteBtn" class="btn btn-ghost" type="button">Cancel</button>
-        <button class="btn btn-primary" type="submit">Save Site</button>
-      </div>
-    </form>
-  </dialog>
-
-  <dialog id="editsDialog" class="app-dialog">
-    <div class="dialog-card">
-      <div class="dialog-header">
-        <h2>Manage Edits</h2>
-        <button id="closeEditsBtn" class="icon-btn" type="button" aria-label="Close edits dialog">✕</button>
-      </div>
-      <div class="dialog-copy">
-        <p><strong>Local edits are kept in this browser on this device.</strong> That is enough for everyday use on one phone or one computer.</p>
-        <p><strong>Export edits</strong> is optional backup insurance, not something you need every five minutes.</p>
-      </div>
-      <div class="dialog-actions stacked-actions">
-        <button id="exportBtn" class="btn btn-primary" type="button">Export Edits</button>
-        <label class="btn btn-ghost file-btn wide-btn">
-          Import Edits
-          <input id="importInput" type="file" accept="application/json" hidden />
-        </label>
+          <label>
+            Website
+            <input name="website" type="url" placeholder="https://">
+          </label>
+          <label>
+            Notes / description
+            <textarea name="description" rows="4"></textarea>
+          </label>
+          <div class="modal-footer">
+            <button type="button" id="cancelSiteFormBtn" class="menu-btn">Cancel</button>
+            <button type="submit" class="menu-btn action-primary">Save Site</button>
+          </div>
+        </form>
       </div>
     </div>
-  </dialog>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <div id="editsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="editsModalTitle">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2 id="editsModalTitle">Local Edits</h2>
+          <button id="closeEditsModalBtn" class="tiny-btn">✕</button>
+        </div>
+        <div class="edits-copy">
+          <p>Your moved pins and added sites are stored locally in this browser.</p>
+          <div id="editCounts"></div>
+          <div class="modal-footer lefty">
+            <button id="downloadEditsBtn" class="menu-btn">Download Backup</button>
+            <button id="clearEditsBtn" class="menu-btn danger-btn">Clear Local Edits</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="app.js"></script>
 </body>

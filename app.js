@@ -1,753 +1,517 @@
-
-const MAP_CENTER = [44.8, -89.5];
-const MAP_ZOOM = 6;
-
-const state = {
-  map: null,
-  clusterGroup: null,
-  allSites: [],
-  visibleLayers: new Set([
-    'Boondocking',
-    'State / County / Town Campgrounds',
-    'Federal Lands',
-    'Private Campgrounds',
-    'Info / Reference'
-  ]),
-  selectedSite: null,
-  movingSiteId: null,
-  deferredPrompt: null,
-  userMovedSheet: false,
-  detailHidden: false,
-  detailCollapsed: false,
-  pendingAddCoords: null,
+const STORAGE_KEY = 'camping-map-local-edits-v5';
+const CATEGORY_LABELS = {
+  boondocking: 'Boondocking',
+  public: 'State / County / Town',
+  federal: 'Federal Lands',
+  private: 'Private Campgrounds',
+  info: 'Info / Reference'
+};
+const CATEGORY_COLORS = {
+  boondocking: '#4f6b3c',
+  public: '#c7ae72',
+  federal: '#c97d32',
+  private: '#8a5b35',
+  info: '#d7bf3c'
 };
 
-const STORAGE_KEY = 'camping-map-edits-v1';
-const SHEET_POSITION_KEY = 'camping-map-sheet-position-v1';
+let map;
+let allSites = [];
+let selectedSiteId = null;
+let moveModeSiteId = null;
+let pendingActionLatLng = null;
+let clusterGroup;
+let markerById = new Map();
+let toastTimer = null;
 
-const LAYER_STYLE = {
-  'Boondocking': { color: '#355e3b', label: 'Boondocking', chipText: '#fffdf7', clusterClass: 'cluster-boondocking' },
-  'State / County / Town Campgrounds': { color: '#b9965b', label: 'State / County / Town', chipText: '#fffaf2', clusterClass: 'cluster-public' },
-  'Federal Lands': { color: '#d07a2d', label: 'Federal Lands', chipText: '#fffaf2', clusterClass: 'cluster-federal' },
-  'Private Campgrounds': { color: '#7c5533', label: 'Private Campgrounds', chipText: '#fffaf2', clusterClass: 'cluster-private' },
-  'Info / Reference': { color: '#d1b93a', label: 'Info / Reference', chipText: '#3b3206', clusterClass: 'cluster-info' },
-};
+const localEdits = loadLocalEdits();
+const ui = {};
 
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
+  grabUi();
   initMap();
-  initUI();
-  await loadSites();
+  bindUi();
+  if (window.innerWidth < 900) ui.menuPanel.classList.remove('open');
+  const baseSites = await fetch('data/sites.json', { cache: 'no-cache' }).then(r => r.json());
+  allSites = mergeSites(baseSites, localEdits);
+  renderMap();
+  closeActionMenu();
+  updateEditCounts();
   registerServiceWorker();
-  initFloatingSheet();
-  if (window.innerWidth <= 820) {
-    setSheetHidden(true);
-    setSheetCollapsed(false);
-  }
+}
+
+function grabUi() {
+  Object.assign(ui, {
+    menuPanel: document.getElementById('menuPanel'),
+    menuToggle: document.getElementById('menuToggle'),
+    searchInput: document.getElementById('searchInput'),
+    sitePanel: document.getElementById('sitePanel'),
+    sitePanelContent: document.getElementById('sitePanelContent'),
+    closeSitePanelBtn: document.getElementById('closeSitePanelBtn'),
+    collapseSitePanelBtn: document.getElementById('collapseSitePanelBtn'),
+    sitePanelHandle: document.getElementById('sitePanelHandle'),
+    actionMenu: document.getElementById('actionMenu'),
+    actionCoords: document.getElementById('actionCoords'),
+    addSiteHereBtn: document.getElementById('addSiteHereBtn'),
+    cancelActionMenuBtn: document.getElementById('cancelActionMenuBtn'),
+    moveBanner: document.getElementById('moveBanner'),
+    cancelMoveBtn: document.getElementById('cancelMoveBtn'),
+    editModal: document.getElementById('editModal'),
+    siteForm: document.getElementById('siteForm'),
+    closeEditModalBtn: document.getElementById('closeEditModalBtn'),
+    cancelSiteFormBtn: document.getElementById('cancelSiteFormBtn'),
+    editsModal: document.getElementById('editsModal'),
+    manageEditsBtn: document.getElementById('manageEditsBtn'),
+    closeEditsModalBtn: document.getElementById('closeEditsModalBtn'),
+    clearEditsBtn: document.getElementById('clearEditsBtn'),
+    downloadEditsBtn: document.getElementById('downloadEditsBtn'),
+    importEditsInput: document.getElementById('importEditsInput'),
+    editCounts: document.getElementById('editCounts')
+  });
 }
 
 function initMap() {
-  state.map = L.map('map', {
+  map = L.map('map', {
     zoomControl: false,
-    preferCanvas: true,
     doubleClickZoom: false,
-  }).setView(MAP_CENTER, MAP_ZOOM);
+    preferCanvas: true
+  }).setView([44.9, -89.5], 5);
 
-  L.control.zoom({ position: 'bottomright' }).addTo(state.map);
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
+    maxZoom: 18,
     attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(state.map);
+  }).addTo(map);
 
-  state.clusterGroup = L.markerClusterGroup({
-    maxClusterRadius: (zoom) => {
-      if (window.innerWidth <= 700) return zoom >= 9 ? 24 : 34;
-      return zoom >= 9 ? 28 : 40;
-    },
+  addLocateControl();
+
+  map.on('contextmenu', (e) => {
+    pendingActionLatLng = e.latlng;
+    openActionMenu(e.containerPoint, e.latlng);
+  });
+
+  map.on('dblclick', (e) => {
+    pendingActionLatLng = e.latlng;
+    openActionMenu(e.containerPoint, e.latlng);
+  });
+
+  map.on('click', async (e) => {
+    closeActionMenu();
+    if (moveModeSiteId) {
+      const site = getSiteById(moveModeSiteId);
+      if (!site) return cancelMoveMode();
+      const ok = confirm(`Move "${site.name}" here?\n${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`);
+      if (!ok) return;
+      upsertOverride({ id: site.id, lat: e.latlng.lat, lng: e.latlng.lng });
+      allSites = mergeSites(allSites.filter(s => !s.isLocalBase), localEdits, true);
+      renderMap();
+      openSiteDetails(getSiteById(site.id));
+      cancelMoveMode();
+      showToast('Site moved.');
+    }
+  });
+}
+
+function bindUi() {
+  ui.menuToggle.addEventListener('click', () => ui.menuPanel.classList.toggle('open'));
+  ui.closeSitePanelBtn.addEventListener('click', () => closeSitePanel());
+  ui.collapseSitePanelBtn.addEventListener('click', () => ui.sitePanel.classList.toggle('collapsed'));
+  ui.addSiteHereBtn.addEventListener('click', () => {
+    if (!pendingActionLatLng) return;
+    openSiteForm(pendingActionLatLng);
+    closeActionMenu();
+  });
+  ui.cancelActionMenuBtn.addEventListener('click', closeActionMenu);
+  ui.cancelMoveBtn.addEventListener('click', cancelMoveMode);
+  ui.closeEditModalBtn.addEventListener('click', closeSiteForm);
+  ui.cancelSiteFormBtn.addEventListener('click', closeSiteForm);
+  ui.siteForm.addEventListener('submit', onSiteFormSubmit);
+  ui.manageEditsBtn.addEventListener('click', () => ui.editsModal.classList.remove('hidden'));
+  ui.closeEditsModalBtn.addEventListener('click', () => ui.editsModal.classList.add('hidden'));
+  ui.clearEditsBtn.addEventListener('click', clearLocalEdits);
+  ui.downloadEditsBtn.addEventListener('click', downloadEditsBackup);
+  ui.importEditsInput.addEventListener('change', importEditsFile);
+
+  document.querySelectorAll('[data-layer]').forEach(el => {
+    el.addEventListener('change', renderMap);
+  });
+  ui.searchInput.addEventListener('input', renderMap);
+
+  window.addEventListener('resize', () => {
+    closeActionMenu();
+    keepPanelInBounds();
+  });
+
+  makePanelDraggable(ui.sitePanel, ui.sitePanelHandle);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeActionMenu();
+      cancelMoveMode();
+      closeSiteForm();
+      ui.editsModal.classList.add('hidden');
+    }
+  });
+}
+
+function renderMap() {
+  if (clusterGroup) map.removeLayer(clusterGroup);
+  markerById.clear();
+
+  clusterGroup = L.markerClusterGroup({
+    maxClusterRadius: 28,
     spiderfyOnMaxZoom: true,
     showCoverageOnHover: false,
     zoomToBoundsOnClick: true,
-    removeOutsideVisibleBounds: true,
-    chunkedLoading: true,
-    disableClusteringAtZoom: 11,
-    iconCreateFunction: createClusterIcon,
+    disableClusteringAtZoom: 9,
+    iconCreateFunction: createClusterIcon
   });
 
-  state.map.addLayer(state.clusterGroup);
-  state.map.on('click', onMapClick);
-  state.map.on('contextmenu', onMapAddIntent);
-  state.map.on('dblclick', onMapAddIntent);
-  document.getElementById('recenterBtn').addEventListener('click', () => {
-    state.map.setView(MAP_CENTER, MAP_ZOOM);
-  });
-}
+  const visibleCategories = new Set(
+    [...document.querySelectorAll('[data-layer]:checked')].map(el => el.dataset.layer)
+  );
+  const q = ui.searchInput.value.trim().toLowerCase();
 
-function initUI() {
-  const searchInput = document.getElementById('searchInput');
-  const mobileSearchInput = document.getElementById('mobileSearchInput');
-  searchInput.addEventListener('input', () => {
-    mobileSearchInput.value = searchInput.value;
-    renderSites();
-  });
-  mobileSearchInput.addEventListener('input', () => {
-    searchInput.value = mobileSearchInput.value;
-    renderSites();
+  const filtered = allSites.filter(site => {
+    if (!visibleCategories.has(site.category)) return false;
+    if (!q) return true;
+    const haystack = `${site.name} ${site.description || ''} ${site.sourceFolder || ''} ${site.categoryLabel || ''}`.toLowerCase();
+    return haystack.includes(q);
   });
 
-  document.getElementById('closeSheetBtn').addEventListener('click', closeDetailsPanel);
-  document.getElementById('collapseSheetBtn').addEventListener('click', toggleSheetCollapse);
-  document.getElementById('showDetailsBtn').addEventListener('click', showDetailsPanel);
-  document.getElementById('moveSiteBtn').addEventListener('click', startMoveMode);
-  document.getElementById('copyCoordsBtn').addEventListener('click', copyCoords);
-  document.getElementById('addSiteBtn').addEventListener('click', () => openAddSiteDialog());
-  document.getElementById('mobileAddSiteBtn').addEventListener('click', () => {
-    document.getElementById('mobileMenuDialog').close();
-    openAddSiteDialog();
-  });
-  document.getElementById('manageEditsBtn').addEventListener('click', () => document.getElementById('editsDialog').showModal());
-  document.getElementById('mobileManageEditsBtn').addEventListener('click', () => {
-    document.getElementById('mobileMenuDialog').close();
-    document.getElementById('editsDialog').showModal();
-  });
-  document.getElementById('mobileMenuBtn').addEventListener('click', () => document.getElementById('mobileMenuDialog').showModal());
-  document.getElementById('closeMobileMenuBtn').addEventListener('click', () => document.getElementById('mobileMenuDialog').close());
-  document.getElementById('closeEditsBtn').addEventListener('click', () => document.getElementById('editsDialog').close());
-  document.getElementById('cancelAddSiteBtn').addEventListener('click', closeAddSiteDialog);
-  document.getElementById('cancelAddSiteTopBtn').addEventListener('click', closeAddSiteDialog);
-  document.getElementById('addSiteForm').addEventListener('submit', handleAddSiteSubmit);
-  document.getElementById('exportBtn').addEventListener('click', exportEdits);
-  document.getElementById('importInput').addEventListener('change', importEdits);
-  document.getElementById('locateBtn').addEventListener('click', locateMe);
-  document.getElementById('dockSheetBtn').addEventListener('click', resetSheetPosition);
-  document.getElementById('toggleSheetBtn').addEventListener('click', toggleDetailSheetSize);
-  document.getElementById('menuBtn').addEventListener('click', toggleToolbar);
-
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    state.deferredPrompt = e;
-    document.getElementById('installBtn').classList.remove('hidden');
-  });
-
-  document.getElementById('installBtn').addEventListener('click', async () => {
-    if (!state.deferredPrompt) return;
-    state.deferredPrompt.prompt();
-    await state.deferredPrompt.userChoice;
-    state.deferredPrompt = null;
-    document.getElementById('installBtn').classList.add('hidden');
-  });
-
-  renderLayerChips();
-  initResponsiveToolbar();
-}
-
-function renderLayerChips() {
-  const targets = [
-    document.getElementById('layerChips'),
-    document.getElementById('mobileLayerChips')
-  ];
-
-  targets.forEach((chipWrap) => {
-    chipWrap.innerHTML = '';
-    Object.keys(LAYER_STYLE).forEach((layer) => {
-      const btn = document.createElement('button');
-      btn.className = 'chip active';
-      btn.textContent = LAYER_STYLE[layer].label;
-      btn.dataset.layer = layer;
-      btn.style.background = LAYER_STYLE[layer].color;
-      btn.style.borderColor = LAYER_STYLE[layer].color;
-      btn.style.color = LAYER_STYLE[layer].chipText;
-      btn.classList.toggle('active', state.visibleLayers.has(layer));
-      btn.addEventListener('click', () => {
-        if (state.visibleLayers.has(layer)) state.visibleLayers.delete(layer);
-        else state.visibleLayers.add(layer);
-        syncLayerChipState();
-        renderSites();
-      });
-      chipWrap.appendChild(btn);
+  filtered.forEach(site => {
+    const marker = L.marker([site.lat, site.lng], {
+      icon: createSiteIcon(site.category),
+      title: site.name
     });
-  });
-
-  syncLayerChipState();
-}
-
-function syncLayerChipState() {
-  document.querySelectorAll('.chip[data-layer]').forEach((btn) => {
-    const active = state.visibleLayers.has(btn.dataset.layer);
-    btn.classList.toggle('active', active);
-  });
-}
-
-async function loadSites() {
-  const baseSites = await fetch('data/sites.json').then(r => r.json());
-  const edits = getStoredEdits();
-
-  const mergedMap = new Map();
-  for (const site of baseSites) mergedMap.set(site.id, { ...site, isUserAdded: false });
-
-  for (const [id, value] of Object.entries(edits.overrides || {})) {
-    if (mergedMap.has(id)) mergedMap.set(id, { ...mergedMap.get(id), ...value, isEdited: true });
-  }
-  for (const site of edits.additions || []) {
-    mergedMap.set(site.id, { ...site, isUserAdded: true, isEdited: true });
-  }
-
-  state.allSites = Array.from(mergedMap.values());
-  renderSites();
-}
-
-function renderSites() {
-  const query = document.getElementById('searchInput').value.trim().toLowerCase();
-  syncLayerChipState();
-  state.clusterGroup.clearLayers();
-
-  const visible = state.allSites.filter(site => {
-    const layerOk = state.visibleLayers.has(site.layer);
-    const text = `${site.name} ${site.layer} ${site.sourceFolder} ${site.descriptionText || ''}`.toLowerCase();
-    const queryOk = !query || text.includes(query);
-    return layerOk && queryOk;
-  });
-
-  visible.forEach(site => {
-    const style = LAYER_STYLE[site.layer] || { color: '#355e3b' };
-    const marker = L.circleMarker([site.lat, site.lng], {
-      radius: 8,
-      color: '#efe6d2',
-      weight: 2,
-      fillColor: style.color,
-      fillOpacity: 0.95,
-      className: 'site-marker'
+    marker.siteId = site.id;
+    marker.on('click', () => {
+      selectedSiteId = site.id;
+      openSiteDetails(site);
     });
+    marker.bindPopup(buildPopupHtml(site), { className: 'custom-popup', offset: [0, -8] });
+    clusterGroup.addLayer(marker);
+    markerById.set(site.id, marker);
+  });
 
-    marker.siteLayer = site.layer;
-    marker.on('click', () => selectSite(site, marker));
+  map.addLayer(clusterGroup);
+}
 
-    marker.bindPopup(`
-      <div class="popup-title">${escapeHtml(site.name)}</div>
-      <div class="popup-meta">${escapeHtml(site.layer)} · ${escapeHtml(site.sourceFolder || '')}</div>
-      <div>${truncate(escapeHtml(site.descriptionText || 'No description yet.'), 150)}</div>
-      <div class="popup-actions">
-        <button onclick="window.__campingMap.selectById('${site.id}')">Details</button>
-        <button onclick="window.__campingMap.moveById('${site.id}')">Move</button>
-      </div>
-    `);
-
-    state.clusterGroup.addLayer(marker);
-    site.__marker = marker;
+function createSiteIcon(category) {
+  return L.divIcon({
+    html: `<div class="site-marker ${category}"></div>`,
+    className: '',
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    popupAnchor: [0, -10]
   });
 }
 
 function createClusterIcon(cluster) {
+  const childMarkers = cluster.getAllChildMarkers();
   const counts = {};
-  for (const marker of cluster.getAllChildMarkers()) {
-    const key = marker.siteLayer || 'Boondocking';
-    counts[key] = (counts[key] || 0) + 1;
-  }
-  const dominant = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Boondocking';
-  const style = LAYER_STYLE[dominant] || LAYER_STYLE['Boondocking'];
+  childMarkers.forEach(m => {
+    const site = getSiteById(m.siteId);
+    const cat = site?.category || 'public';
+    counts[cat] = (counts[cat] || 0) + 1;
+  });
+  const dominant = Object.entries(counts).sort((a,b) => b[1]-a[1])[0]?.[0] || 'public';
   const count = cluster.getChildCount();
-  const sizeClass = count < 10 ? 'marker-cluster-small' : count < 50 ? 'marker-cluster-medium' : 'marker-cluster-large';
+  const sizeClass = count < 10 ? 'cluster-small' : count < 50 ? 'cluster-medium' : 'cluster-large';
+  const bg = CATEGORY_COLORS[dominant] || '#4f6b3c';
   return L.divIcon({
-    html: `<div><span>${count}</span></div>`,
-    className: `marker-cluster ${sizeClass} ${style.clusterClass}`,
-    iconSize: L.point(40, 40)
+    html: `<div class="cluster-wrap" style="background:${bg}"><span>${count}</span></div>`,
+    className: sizeClass,
+    iconSize: count < 10 ? [34,34] : count < 50 ? [40,40] : [48,48]
   });
 }
 
-function selectSite(site, marker = null) {
-  state.selectedSite = site;
-  showDetailSheet();
-  const title = document.getElementById('detailTitle');
-  const meta = document.getElementById('detailMeta');
-  const body = document.getElementById('detailBody');
-  const moveBtn = document.getElementById('moveSiteBtn');
-  const copyBtn = document.getElementById('copyCoordsBtn');
-
-  title.textContent = site.name;
-  meta.innerHTML = [
-    pill(site.layer),
-    pill(site.sourceFolder || 'Imported'),
-    pill(`${site.lat.toFixed(5)}, ${site.lng.toFixed(5)}`),
-    site.isEdited ? pill('Edited') : '',
-    site.isUserAdded ? pill('User added') : '',
-  ].join('');
-
-  body.innerHTML = site.descriptionHtml?.trim()
-    ? sanitizeDescription(site.descriptionHtml)
-    : `<p>${escapeHtml(site.descriptionText || 'No description yet.')}</p>`;
-
-  moveBtn.disabled = false;
-  copyBtn.disabled = false;
-
-  if (marker) marker.openPopup();
-  else if (site.__marker) site.__marker.openPopup();
-
-  if (window.innerWidth <= 760) {
-    document.getElementById('toolbarPanel').classList.remove('toolbar-open');
-    document.getElementById('menuBtn').setAttribute('aria-expanded', 'false');
-    document.getElementById('menuBtn').textContent = 'Menu';
-  }
-
-  if (!state.userMovedSheet) resetSheetPosition();
-}
-
-function clearSelection() {
-  if (state.selectedSite?.__marker) state.selectedSite.__marker.closePopup();
-  state.selectedSite = null;
-  state.movingSiteId = null;
-  document.getElementById('detailTitle').textContent = 'Pick a marker';
-  document.getElementById('detailMeta').innerHTML = '';
-  document.getElementById('detailBody').innerHTML = '<p>Tap a marker to see details, move a bad pin, or add a new site.</p>';
-  document.getElementById('moveSiteBtn').disabled = true;
-  document.getElementById('copyCoordsBtn').disabled = true;
-}
-
-function startMoveMode() {
-  if (!state.selectedSite) return;
-  state.movingSiteId = state.selectedSite.id;
-  document.getElementById('detailBody').innerHTML = `
-    <p><strong>Move mode is armed.</strong></p>
-    <p>Tap the correct location on the map. The base data stays intact; your fix is stored as a local override.</p>
+function buildPopupHtml(site) {
+  const desc = (site.description || '').trim();
+  const short = desc.length > 120 ? `${desc.slice(0, 117)}…` : desc;
+  const nav = `https://www.google.com/maps?q=${encodeURIComponent(site.lat + ',' + site.lng)}`;
+  return `
+    <div class="popup-title">${escapeHtml(site.name)}</div>
+    <div class="popup-meta">${escapeHtml(site.categoryLabel || CATEGORY_LABELS[site.category] || '')}</div>
+    ${short ? `<div class="popup-meta">${escapeHtml(short)}</div>` : ''}
+    <div class="popup-actions">
+      ${site.website ? `<a class="popup-link" href="${escapeAttr(site.website)}" target="_blank" rel="noopener">Website</a>` : ''}
+      <a class="popup-link" href="${nav}" target="_blank" rel="noopener">Navigate</a>
+    </div>
   `;
 }
 
-function onMapClick(e) {
-  if (!state.movingSiteId) return;
-  const site = state.allSites.find(s => s.id === state.movingSiteId);
+function openSiteDetails(site) {
   if (!site) return;
-  saveOverride(site.id, { lat: e.latlng.lat, lng: e.latlng.lng });
-  site.lat = e.latlng.lat;
-  site.lng = e.latlng.lng;
-  site.isEdited = true;
-  state.movingSiteId = null;
-  renderSites();
-  selectSite(site);
+  ui.sitePanel.classList.remove('hidden');
+  const color = CATEGORY_COLORS[site.category] || '#4f6b3c';
+  ui.sitePanelContent.innerHTML = `
+    <div class="site-pill" style="background:${color}">${escapeHtml(site.categoryLabel || CATEGORY_LABELS[site.category])}</div>
+    <h2 class="site-title">${escapeHtml(site.name)}</h2>
+    <div class="site-meta">Source folder: ${escapeHtml(site.sourceFolder || 'Local edit')}</div>
+    ${site.description ? `<div class="site-copy">${escapeHtml(site.description)}</div>` : '<div class="site-copy">No notes yet.</div>'}
+    <div class="coords">${site.lat.toFixed(6)}, ${site.lng.toFixed(6)}</div>
+    <div class="site-links">
+      ${site.website ? `<a class="popup-link" href="${escapeAttr(site.website)}" target="_blank" rel="noopener">Website</a>` : ''}
+      <a class="popup-link" href="https://www.google.com/maps?q=${encodeURIComponent(site.lat + ',' + site.lng)}" target="_blank" rel="noopener">Navigate</a>
+    </div>
+    <button id="moveSiteBtn" class="menu-btn action-primary">Move Site</button>
+  `;
+  ui.sitePanel.classList.remove('collapsed');
+  document.getElementById('moveSiteBtn').addEventListener('click', () => startMoveMode(site.id));
+  keepPanelInBounds();
 }
 
-
-function onMapAddIntent(e) {
-  if (state.movingSiteId) return;
-  state.pendingAddCoords = { lat: e.latlng.lat, lng: e.latlng.lng };
-  const lat = e.latlng.lat.toFixed(6);
-  const lng = e.latlng.lng.toFixed(6);
-  L.popup()
-    .setLatLng(e.latlng)
-    .setContent(`
-      <div class="popup-title">Add a site here?</div>
-      <div class="popup-meta">${lat}, ${lng}</div>
-      <div class="popup-actions">
-        <button onclick="window.__campingMap.addHere(${e.latlng.lat}, ${e.latlng.lng})">Add Site Here</button>
-      </div>
-    `)
-    .openOn(state.map);
+function closeSitePanel() {
+  ui.sitePanel.classList.add('hidden');
+  ui.sitePanel.classList.add('collapsed');
 }
 
-function copyCoords() {
-  if (!state.selectedSite) return;
-  const text = `${state.selectedSite.lat.toFixed(6)}, ${state.selectedSite.lng.toFixed(6)}`;
-  navigator.clipboard?.writeText(text);
+function openActionMenu(containerPoint, latlng) {
+  cancelMoveMode();
+  ui.actionCoords.textContent = `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
+  ui.actionMenu.classList.remove('hidden');
+  const padding = 14;
+  const menuRect = { width: 280, height: 150 };
+  const x = Math.min(window.innerWidth - menuRect.width - padding, Math.max(padding, containerPoint.x));
+  const y = Math.min(window.innerHeight - menuRect.height - padding, Math.max(70, containerPoint.y + 58));
+  ui.actionMenu.style.left = `${x}px`;
+  ui.actionMenu.style.top = `${y}px`;
 }
 
-function openAddSiteDialog(coords = null) {
-  state.pendingAddCoords = coords;
-  const dialog = document.getElementById('addSiteDialog');
-  const form = document.getElementById('addSiteForm');
-  if (coords) {
-    form.elements.lat.value = coords.lat.toFixed(6);
-    form.elements.lng.value = coords.lng.toFixed(6);
-  } else {
-    form.elements.lat.value = '';
-    form.elements.lng.value = '';
-  }
-  dialog.showModal();
+function closeActionMenu() {
+  ui.actionMenu.classList.add('hidden');
+  pendingActionLatLng = null;
 }
 
-function closeAddSiteDialog() {
-  state.pendingAddCoords = null;
-  document.getElementById('addSiteDialog').close();
+function openSiteForm(latlng) {
+  ui.siteForm.reset();
+  ui.siteForm.elements.lat.value = latlng.lat.toFixed(6);
+  ui.siteForm.elements.lng.value = latlng.lng.toFixed(6);
+  ui.editModal.classList.remove('hidden');
 }
 
-function handleAddSiteSubmit(e) {
+function closeSiteForm() {
+  ui.editModal.classList.add('hidden');
+}
+
+function onSiteFormSubmit(e) {
   e.preventDefault();
-  const form = e.currentTarget;
-  const fd = new FormData(form);
-  const lat = Number(fd.get('lat'));
-  const lng = Number(fd.get('lng'));
-  if (Number.isNaN(lat) || Number.isNaN(lng)) {
-    window.alert('Those coordinates were not valid.');
-    return;
-  }
-  const newSite = {
-    id: `user-${Date.now()}`,
-    name: String(fd.get('name') || '').trim(),
-    layer: String(fd.get('layer') || 'Boondocking'),
-    sourceFolder: 'User added',
-    lat,
-    lng,
-    descriptionHtml: '',
-    descriptionText: String(fd.get('note') || '').trim(),
+  const fd = new FormData(ui.siteForm);
+  const site = {
+    id: `local-${Date.now()}`,
+    name: String(fd.get('name')).trim(),
+    category: String(fd.get('category')),
+    categoryLabel: CATEGORY_LABELS[String(fd.get('category'))],
+    sourceFolder: 'Local edit',
+    lat: Number(fd.get('lat')),
+    lng: Number(fd.get('lng')),
+    website: String(fd.get('website') || '').trim(),
+    description: String(fd.get('description') || '').trim(),
+    isLocal: true
   };
-  saveAddition(newSite);
-  state.allSites.push({ ...newSite, isUserAdded: true, isEdited: true });
-  renderSites();
-  const added = state.allSites[state.allSites.length - 1];
-  selectSite(added);
-  state.map.setView([lat, lng], 11);
-  form.reset();
-  state.pendingAddCoords = null;
-  form.elements.layer.value = 'Boondocking';
-  closeAddSiteDialog();
+  localEdits.addedSites.push(site);
+  persistLocalEdits();
+  allSites = mergeSites(allSites.filter(s => !s.isLocalBase), localEdits, true);
+  renderMap();
+  closeSiteForm();
+  showToast('Site added.');
 }
 
-function getStoredEdits() {
+function startMoveMode(siteId) {
+  moveModeSiteId = siteId;
+  ui.moveBanner.classList.remove('hidden');
+  ui.moveBanner.querySelector('#moveBannerText').textContent = 'Tap the new location for this site.';
+}
+
+function cancelMoveMode() {
+  moveModeSiteId = null;
+  ui.moveBanner.classList.add('hidden');
+}
+
+function upsertOverride(override) {
+  const idx = localEdits.overrides.findIndex(o => o.id === override.id);
+  if (idx >= 0) localEdits.overrides[idx] = { ...localEdits.overrides[idx], ...override };
+  else localEdits.overrides.push(override);
+  persistLocalEdits();
+  updateEditCounts();
+}
+
+function mergeSites(baseSites, edits, preserveExistingBase = false) {
+  // preserveExistingBase true means incoming baseSites may already include local sites; strip them first above.
+  const sites = preserveExistingBase ? [...baseSites] : [...baseSites.map(s => ({ ...s }))];
+  const overrideMap = new Map((edits?.overrides || []).map(o => [o.id, o]));
+  const merged = sites.map(site => {
+    const override = overrideMap.get(site.id);
+    return override ? { ...site, ...override } : site;
+  });
+  const added = (edits?.addedSites || []).map(site => ({ ...site, isLocalBase: true }));
+  return [...merged, ...added];
+}
+
+function loadLocalEdits() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { overrides: {}, additions: [] };
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { overrides: [], addedSites: [] };
+    const parsed = JSON.parse(raw);
+    return {
+      overrides: Array.isArray(parsed.overrides) ? parsed.overrides : [],
+      addedSites: Array.isArray(parsed.addedSites) ? parsed.addedSites : []
+    };
   } catch {
-    return { overrides: {}, additions: [] };
+    return { overrides: [], addedSites: [] };
   }
 }
 
-function setStoredEdits(edits) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(edits));
+function persistLocalEdits() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(localEdits));
+  updateEditCounts();
 }
 
-function saveOverride(id, patch) {
-  const edits = getStoredEdits();
-  edits.overrides ||= {};
-  edits.overrides[id] = { ...(edits.overrides[id] || {}), ...patch };
-  setStoredEdits(edits);
+function getSiteById(id) {
+  return allSites.find(site => site.id === id) || null;
 }
 
-function saveAddition(site) {
-  const edits = getStoredEdits();
-  edits.additions ||= [];
-  edits.additions.push(site);
-  setStoredEdits(edits);
+function updateEditCounts() {
+  ui.editCounts.innerHTML = `
+    <p><strong>${localEdits.overrides.length}</strong> moved / corrected sites</p>
+    <p><strong>${localEdits.addedSites.length}</strong> locally added sites</p>
+  `;
 }
 
-function exportEdits() {
-  const data = getStoredEdits();
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
+function clearLocalEdits() {
+  if (!confirm('Clear all local edits from this browser?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  localEdits.overrides = [];
+  localEdits.addedSites = [];
+  location.reload();
+}
+
+function downloadEditsBackup() {
+  const blob = new Blob([JSON.stringify(localEdits, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
-  a.href = url; a.download = 'camping-map-edits.json';
+  a.href = URL.createObjectURL(blob);
+  a.download = 'camping-map-local-edits.json';
   a.click();
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(a.href);
 }
 
-async function importEdits(e) {
+async function importEditsFile(e) {
   const file = e.target.files?.[0];
   if (!file) return;
-  const data = JSON.parse(await file.text());
-  setStoredEdits(data);
-  await loadSites();
-  e.target.value = '';
-  document.getElementById('editsDialog').close();
-}
-
-
-function setSheetHidden(hidden) {
-  state.detailHidden = hidden;
-  const sheet = document.getElementById('detailSheet');
-  const btn = document.getElementById('showDetailsBtn');
-  sheet.classList.toggle('is-hidden', hidden);
-  btn.classList.toggle('hidden', !hidden);
-}
-
-function setSheetCollapsed(collapsed) {
-  state.detailCollapsed = collapsed;
-  const sheet = document.getElementById('detailSheet');
-  const btn = document.getElementById('collapseSheetBtn');
-  sheet.classList.toggle('is-collapsed', collapsed);
-  btn.textContent = collapsed ? '+' : '—';
-  btn.title = collapsed ? 'Expand details' : 'Collapse details';
-  btn.setAttribute('aria-label', collapsed ? 'Expand details' : 'Collapse details');
-}
-
-function closeDetailsPanel() {
-  clearSelection();
-  setSheetHidden(true);
-}
-
-function showDetailsPanel() {
-  setSheetHidden(false);
-}
-
-function toggleSheetCollapse() {
-  setSheetCollapsed(!state.detailCollapsed);
-}
-
-function locateMe() {
-  if (!navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition((pos) => {
-    const { latitude, longitude } = pos.coords;
-    state.map.setView([latitude, longitude], 10);
-    L.circleMarker([latitude, longitude], {
-      radius: 7, color: '#17311f', fillColor: '#d9c59b', fillOpacity: 1, weight: 3
-    }).addTo(state.map).bindPopup('You are here-ish.').openPopup();
-  });
-}
-
-function pill(text) {
-  return `<span class="meta-pill">${escapeHtml(text)}</span>`;
-}
-
-function sanitizeDescription(htmlString) {
-  const wrapper = document.createElement('div');
-  wrapper.innerHTML = htmlString;
-
-  wrapper.querySelectorAll('script, iframe, style').forEach(el => el.remove());
-  wrapper.querySelectorAll('*').forEach(el => {
-    [...el.attributes].forEach(attr => {
-      const name = attr.name.toLowerCase();
-      if (name.startsWith('on')) el.removeAttribute(attr.name);
-    });
-    if (el.tagName === 'IMG') {
-      el.style.maxWidth = '100%';
-      el.style.borderRadius = '12px';
-      el.style.height = 'auto';
-      el.loading = 'lazy';
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    if (!Array.isArray(parsed.overrides) || !Array.isArray(parsed.addedSites)) {
+      throw new Error('That file does not look like a camping-map edits backup.');
     }
-    if (el.tagName === 'A') {
-      el.target = '_blank';
-      el.rel = 'noopener noreferrer';
+    localEdits.overrides = parsed.overrides;
+    localEdits.addedSites = parsed.addedSites;
+    persistLocalEdits();
+    location.reload();
+  } catch (err) {
+    alert(err.message || 'Could not import that edits file.');
+  } finally {
+    e.target.value = '';
+  }
+}
+
+function addLocateControl() {
+  const LocateControl = L.Control.extend({
+    options: { position: 'topright' },
+    onAdd() {
+      const wrapper = L.DomUtil.create('div', 'leaflet-bar locate-control');
+      const btn = L.DomUtil.create('button', '', wrapper);
+      btn.type = 'button';
+      btn.textContent = '◎';
+      btn.title = 'Locate me';
+      L.DomEvent.disableClickPropagation(wrapper);
+      L.DomEvent.on(btn, 'click', (e) => {
+        L.DomEvent.stop(e);
+        map.locate({ setView: true, maxZoom: 12 });
+      });
+      return wrapper;
     }
   });
-  return wrapper.innerHTML;
+  map.addControl(new LocateControl());
+  map.on('locationerror', () => showToast('Could not get your location.'));
 }
 
-function truncate(str, max) {
-  return str.length > max ? `${str.slice(0, max - 1)}…` : str;
-}
-
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, m => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
-  }[m]));
-}
-
-
-function onMapAddIntent(e) {
-  if (state.movingSiteId) return;
-  openAddSiteDialog({ lat: e.latlng.lat, lng: e.latlng.lng });
-}
-
-function showDetailSheet() {
-  const sheet = document.getElementById('detailSheet');
-  sheet.classList.remove('hidden-sheet');
-  sheet.setAttribute('aria-hidden', 'false');
-}
-
-function hideDetailSheet() {
-  clearSelection({ keepVisible: true });
-  const sheet = document.getElementById('detailSheet');
-  sheet.classList.add('hidden-sheet');
-  sheet.setAttribute('aria-hidden', 'true');
-}
-
-function toggleDetailSheetSize() {
-  const sheet = document.getElementById('detailSheet');
-  state.detailSheetExpanded = !state.detailSheetExpanded;
-  sheet.classList.toggle('sheet-expanded', state.detailSheetExpanded);
-  constrainSheetToPanel();
-}
-
-function toggleToolbar() {
-  const panel = document.getElementById('toolbarPanel');
-  const btn = document.getElementById('menuBtn');
-  const open = !panel.classList.contains('toolbar-open');
-  panel.classList.toggle('toolbar-open', open);
-  btn.setAttribute('aria-expanded', String(open));
-  btn.textContent = open ? 'Close' : 'Menu';
-}
-
-function initResponsiveToolbar() {
-  const panel = document.getElementById('toolbarPanel');
-  const btn = document.getElementById('menuBtn');
-  const sync = () => {
-    if (window.innerWidth > 760) {
-      panel.classList.add('toolbar-open');
-      btn.setAttribute('aria-expanded', 'true');
-      btn.textContent = 'Menu';
-    } else {
-      panel.classList.remove('toolbar-open');
-      btn.setAttribute('aria-expanded', 'false');
-      btn.textContent = 'Menu';
-    }
+function makePanelDraggable(panel, handle) {
+  let dragging = false;
+  let startX = 0, startY = 0, origLeft = 0, origTop = 0;
+  const desktopOnly = () => window.innerWidth > 900;
+  const pointerDown = (e) => {
+    if (!desktopOnly()) return;
+    dragging = true;
+    const rect = panel.getBoundingClientRect();
+    panel.style.left = `${rect.left}px`;
+    panel.style.top = `${rect.top}px`;
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
+    startX = e.clientX ?? e.touches?.[0]?.clientX;
+    startY = e.clientY ?? e.touches?.[0]?.clientY;
+    origLeft = rect.left;
+    origTop = rect.top;
+    document.body.style.userSelect = 'none';
   };
-  sync();
-  window.addEventListener('resize', sync);
+  const pointerMove = (e) => {
+    if (!dragging) return;
+    const x = e.clientX ?? e.touches?.[0]?.clientX;
+    const y = e.clientY ?? e.touches?.[0]?.clientY;
+    panel.style.left = `${origLeft + x - startX}px`;
+    panel.style.top = `${origTop + y - startY}px`;
+    keepPanelInBounds();
+  };
+  const pointerUp = () => {
+    dragging = false;
+    document.body.style.userSelect = '';
+  };
+  handle.addEventListener('pointerdown', pointerDown);
+  window.addEventListener('pointermove', pointerMove);
+  window.addEventListener('pointerup', pointerUp);
+}
+
+function keepPanelInBounds() {
+  if (ui.sitePanel.classList.contains('hidden')) return;
+  if (window.innerWidth <= 900) {
+    ui.sitePanel.style.left = '';
+    ui.sitePanel.style.top = '';
+    ui.sitePanel.style.right = '';
+    ui.sitePanel.style.bottom = '';
+    return;
+  }
+  const rect = ui.sitePanel.getBoundingClientRect();
+  const minTop = 70;
+  const minLeft = 8;
+  const maxLeft = window.innerWidth - rect.width - 8;
+  const maxTop = window.innerHeight - rect.height - 8;
+  const nextLeft = Math.min(maxLeft, Math.max(minLeft, rect.left));
+  const nextTop = Math.min(maxTop, Math.max(minTop, rect.top));
+  ui.sitePanel.style.left = `${nextLeft}px`;
+  ui.sitePanel.style.top = `${nextTop}px`;
+}
+
+function showToast(msg) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.remove(), 2200);
 }
 
 function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 }
 
-function initFloatingSheet() {
-  const sheet = document.getElementById('detailSheet');
-  const handle = document.getElementById('sheetDragHandle');
-  const panel = document.querySelector('.map-panel');
-
-  restoreSheetPosition();
-  constrainSheetToPanel();
-  hideDetailSheet();
-  if (window.innerWidth <= 820) return;
-  window.addEventListener('resize', constrainSheetToPanel);
-  window.addEventListener('orientationchange', () => setTimeout(constrainSheetToPanel, 100));
-
-  let dragging = false;
-  let startX = 0;
-  let startY = 0;
-  let originLeft = 0;
-  let originTop = 0;
-
-  const startDrag = (clientX, clientY) => {
-    dragging = true;
-    state.userMovedSheet = true;
-    const rect = sheet.getBoundingClientRect();
-    const parentRect = panel.getBoundingClientRect();
-    originLeft = rect.left - parentRect.left;
-    originTop = rect.top - parentRect.top;
-    startX = clientX;
-    startY = clientY;
-  };
-
-  const moveDrag = (clientX, clientY) => {
-    if (!dragging) return;
-    const dx = clientX - startX;
-    const dy = clientY - startY;
-    positionSheet(originLeft + dx, originTop + dy);
-  };
-
-  const endDrag = () => {
-    if (!dragging) return;
-    dragging = false;
-    saveSheetPosition();
-  };
-
-  handle.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-    startDrag(e.clientX, e.clientY);
-  });
-  window.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY));
-  window.addEventListener('mouseup', endDrag);
-
-  handle.addEventListener('touchstart', (e) => {
-    const t = e.touches[0];
-    if (!t) return;
-    startDrag(t.clientX, t.clientY);
-  }, { passive: true });
-  window.addEventListener('touchmove', (e) => {
-    const t = e.touches[0];
-    if (!t) return;
-    moveDrag(t.clientX, t.clientY);
-  }, { passive: true });
-  window.addEventListener('touchend', endDrag);
-
-  function positionSheet(left, top) {
-    const parentRect = panel.getBoundingClientRect();
-    const rect = sheet.getBoundingClientRect();
-    const maxLeft = Math.max(0, parentRect.width - rect.width - 8);
-    const maxTop = Math.max(0, parentRect.height - rect.height - 8);
-    const clampedLeft = Math.min(Math.max(8, left), maxLeft);
-    const clampedTop = Math.min(Math.max(8, top), maxTop);
-    sheet.style.left = `${clampedLeft}px`;
-    sheet.style.top = `${clampedTop}px`;
-    sheet.style.right = 'auto';
-    sheet.style.bottom = 'auto';
-  }
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
-
-function saveSheetPosition() {
-  const sheet = document.getElementById('detailSheet');
-  const left = parseFloat(sheet.style.left);
-  const top = parseFloat(sheet.style.top);
-  if (!Number.isFinite(left) || !Number.isFinite(top)) return;
-  localStorage.setItem(SHEET_POSITION_KEY, JSON.stringify({ left, top }));
-}
-
-function restoreSheetPosition() {
-  const saved = localStorage.getItem(SHEET_POSITION_KEY);
-  if (!saved) return;
-  try {
-    const { left, top } = JSON.parse(saved);
-    if (Number.isFinite(left) && Number.isFinite(top)) {
-      state.userMovedSheet = true;
-      document.getElementById('detailSheet').style.left = `${left}px`;
-      document.getElementById('detailSheet').style.top = `${top}px`;
-      document.getElementById('detailSheet').style.right = 'auto';
-      document.getElementById('detailSheet').style.bottom = 'auto';
-    }
-  } catch {}
-}
-
-function constrainSheetToPanel() {
-  const sheet = document.getElementById('detailSheet');
-  const panel = document.querySelector('.map-panel');
-  const panelRect = panel.getBoundingClientRect();
-  const rect = sheet.getBoundingClientRect();
-
-  if (window.innerWidth <= 760 && !state.userMovedSheet) {
-    resetSheetPosition();
-    return;
-  }
-
-  if (!state.userMovedSheet) {
-    resetSheetPosition();
-    return;
-  }
-
-  let left = parseFloat(sheet.style.left);
-  let top = parseFloat(sheet.style.top);
-  if (!Number.isFinite(left)) left = panelRect.width - rect.width - 16;
-  if (!Number.isFinite(top)) top = 16;
-
-  const maxLeft = Math.max(8, panelRect.width - rect.width - 8);
-  const maxTop = Math.max(8, panelRect.height - rect.height - 8);
-
-  left = Math.min(Math.max(8, left), maxLeft);
-  top = Math.min(Math.max(8, top), maxTop);
-
-  sheet.style.left = `${left}px`;
-  sheet.style.top = `${top}px`;
-  sheet.style.right = 'auto';
-  sheet.style.bottom = 'auto';
-  saveSheetPosition();
-}
-
-function resetSheetPosition() {
-  const sheet = document.getElementById('detailSheet');
-  state.userMovedSheet = false;
-  localStorage.removeItem(SHEET_POSITION_KEY);
-  sheet.style.left = '';
-  sheet.style.top = '';
-  sheet.style.right = '';
-  sheet.style.bottom = '';
-  if (window.innerWidth <= 760) {
-    sheet.style.left = '0.75rem';
-    sheet.style.right = '0.75rem';
-    sheet.style.top = 'auto';
-    sheet.style.bottom = '0.75rem';
-  }
-}
-
-window.__campingMap = {
-  selectById(id) {
-    const site = state.allSites.find(s => s.id === id);
-    if (site) selectSite(site);
-  },
-  moveById(id) {
-    const site = state.allSites.find(s => s.id === id);
-    if (site) {
-      selectSite(site);
-      startMoveMode();
-    }
-  },
-  addHere(lat, lng) {
-    state.map.closePopup();
-    openAddSiteDialog({ lat, lng });
-  }
-};
+function escapeAttr(s) { return escapeHtml(s); }

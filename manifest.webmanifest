@@ -1,11 +1,11 @@
 {
-  "name": "Camping Across America",
+  "name": "Camping Map",
   "short_name": "Camping Map",
+  "description": "A mobile-friendly camping map with local edits.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#efe6d2",
-  "theme_color": "#2f5d3a",
-  "orientation": "any",
+  "background_color": "#efe4cf",
+  "theme_color": "#4f6b3c",
   "icons": [
     {
       "src": "icons/icon-192.png",
