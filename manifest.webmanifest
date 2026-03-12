@@ -3,11 +3,19 @@
   "short_name": "Camping Map",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f3f0e7",
-  "theme_color": "#1f5131",
+  "background_color": "#efe6d2",
+  "theme_color": "#2f5d3a",
   "orientation": "any",
   "icons": [
-    {"src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png"}
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
   ]
 }
