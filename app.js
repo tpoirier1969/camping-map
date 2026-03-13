@@ -216,12 +216,24 @@ function normalizeSite(raw, idx) {
   };
 }
 
+async function fetchJsonWithTimeout(url, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { cache: 'no-store', signal: controller.signal });
+    if (!response.ok) return null;
+    return await response.json();
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
 async function loadFirstAvailable(urls) {
   for (const url of urls) {
     try {
-      const response = await fetch(url, { cache: 'no-store' });
-      if (!response.ok) continue;
-      return await response.json();
+      const data = await fetchJsonWithTimeout(url, 8000);
+      if (data == null) continue;
+      return data;
     } catch {
       // keep trying
     }
@@ -249,6 +261,10 @@ async function loadData() {
   renderLayerControls();
   renderLegend();
   syncTrailUi();
+  if (model.map && model.styleReady) {
+    updateOverlays();
+    refreshStatusText();
+  }
 }
 
 function buildLayerDefinitions() {
@@ -788,9 +804,12 @@ function initMap() {
 
 async function main() {
   bindUi();
-  await loadData();
   initMap();
   refreshStatusText();
+  loadData().catch((error) => {
+    console.error(error);
+    els.statusText.textContent = 'Map loaded, but campsite data is still not coming in. Check your data file path and network.';
+  });
 }
 
 main().catch((error) => {
