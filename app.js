@@ -118,15 +118,156 @@ function hashColor(text) {
   return `hsl(${Math.abs(hash) % 360} 60% 52%)`;
 }
 
+
+function listAllValues(input, depth = 0, seen = new Set()) {
+  if (input == null || depth > 2) return [];
+  if (typeof input === 'string' || typeof input === 'number' || typeof input === 'boolean') return [String(input)];
+  if (seen.has(input)) return [];
+  if (typeof input !== 'object') return [];
+  seen.add(input);
+  const values = [];
+  if (Array.isArray(input)) {
+    for (const item of input) values.push(...listAllValues(item, depth + 1, seen));
+    return values;
+  }
+  for (const value of Object.values(input)) values.push(...listAllValues(value, depth + 1, seen));
+  return values;
+}
+
+function getFieldAny(obj, candidates = []) {
+  if (!obj || typeof obj !== 'object') return undefined;
+  const directKeys = Object.keys(obj);
+  const lookup = new Map(directKeys.map((key) => [key.toLowerCase().replace(/[^a-z0-9]/g, ''), key]));
+  for (const candidate of candidates) {
+    if (candidate in obj && obj[candidate] != null && obj[candidate] !== '') return obj[candidate];
+    const match = lookup.get(String(candidate).toLowerCase().replace(/[^a-z0-9]/g, ''));
+    if (match && obj[match] != null && obj[match] !== '') return obj[match];
+  }
+  return undefined;
+}
+
+const STATE_NAME_TO_ABBR = {
+  alabama:'AL', alaska:'AK', arizona:'AZ', arkansas:'AR', california:'CA', colorado:'CO', connecticut:'CT', delaware:'DE', florida:'FL', georgia:'GA', hawaii:'HI', idaho:'ID', illinois:'IL', indiana:'IN', iowa:'IA', kansas:'KS', kentucky:'KY', louisiana:'LA', maine:'ME', maryland:'MD', massachusetts:'MA', michigan:'MI', minnesota:'MN', mississippi:'MS', missouri:'MO', montana:'MT', nebraska:'NE', nevada:'NV', 'new hampshire':'NH', 'new jersey':'NJ', 'new mexico':'NM', 'new york':'NY', 'north carolina':'NC', 'north dakota':'ND', ohio:'OH', oklahoma:'OK', oregon:'OR', pennsylvania:'PA', 'rhode island':'RI', 'south carolina':'SC', 'south dakota':'SD', tennessee:'TN', texas:'TX', utah:'UT', vermont:'VT', virginia:'VA', washington:'WA', 'west virginia':'WV', wisconsin:'WI', wyoming:'WY'
+};
+const STATE_ABBRS = new Set(Object.values(STATE_NAME_TO_ABBR));
+const ROUGH_STATE_BOUNDS = [
+  { abbr:'MI', minLng:-90.6, maxLng:-82.1, minLat:41.5, maxLat:48.5 },
+  { abbr:'WI', minLng:-93.1, maxLng:-86.2, minLat:42.3, maxLat:47.4 },
+  { abbr:'MN', minLng:-97.5, maxLng:-89.4, minLat:43.4, maxLat:49.5 },
+  { abbr:'IL', minLng:-91.6, maxLng:-87.0, minLat:36.8, maxLat:42.6 },
+  { abbr:'IN', minLng:-88.2, maxLng:-84.6, minLat:37.7, maxLat:41.9 },
+  { abbr:'OH', minLng:-84.9, maxLng:-80.3, minLat:38.2, maxLat:42.4 },
+  { abbr:'PA', minLng:-80.7, maxLng:-74.5, minLat:39.5, maxLat:42.6 },
+  { abbr:'NY', minLng:-79.9, maxLng:-71.8, minLat:40.4, maxLat:45.2 },
+  { abbr:'IA', minLng:-96.7, maxLng:-90.1, minLat:40.3, maxLat:43.6 },
+  { abbr:'MO', minLng:-95.8, maxLng:-89.0, minLat:35.8, maxLat:40.8 },
+  { abbr:'AR', minLng:-94.7, maxLng:-89.5, minLat:33.0, maxLat:36.7 },
+  { abbr:'MS', minLng:-91.8, maxLng:-88.0, minLat:30.1, maxLat:35.1 },
+  { abbr:'AL', minLng:-88.5, maxLng:-84.8, minLat:30.1, maxLat:35.1 },
+  { abbr:'GA', minLng:-85.7, maxLng:-80.7, minLat:30.3, maxLat:35.1 },
+  { abbr:'FL', minLng:-87.8, maxLng:-79.8, minLat:24.3, maxLat:31.2 },
+  { abbr:'NC', minLng:-84.4, maxLng:-75.3, minLat:33.8, maxLat:36.8 },
+  { abbr:'SC', minLng:-83.5, maxLng:-78.3, minLat:32.0, maxLat:35.3 },
+  { abbr:'TN', minLng:-90.5, maxLng:-81.5, minLat:34.8, maxLat:36.9 },
+  { abbr:'KY', minLng:-89.7, maxLng:-81.9, minLat:36.3, maxLat:39.3 },
+  { abbr:'VA', minLng:-83.7, maxLng:-75.2, minLat:36.4, maxLat:39.6 },
+  { abbr:'WV', minLng:-82.7, maxLng:-77.7, minLat:37.0, maxLat:40.7 },
+  { abbr:'MD', minLng:-79.6, maxLng:-75.0, minLat:37.8, maxLat:39.8 },
+  { abbr:'NJ', minLng:-75.7, maxLng:-73.8, minLat:38.9, maxLat:41.4 },
+  { abbr:'DE', minLng:-75.8, maxLng:-75.0, minLat:38.4, maxLat:39.9 },
+  { abbr:'CT', minLng:-73.8, maxLng:-71.7, minLat:40.9, maxLat:42.1 },
+  { abbr:'RI', minLng:-71.9, maxLng:-71.1, minLat:41.1, maxLat:42.1 },
+  { abbr:'MA', minLng:-73.6, maxLng:-69.8, minLat:41.2, maxLat:42.9 },
+  { abbr:'VT', minLng:-73.5, maxLng:-71.4, minLat:42.7, maxLat:45.1 },
+  { abbr:'NH', minLng:-72.7, maxLng:-70.6, minLat:42.7, maxLat:45.4 },
+  { abbr:'ME', minLng:-71.2, maxLng:-66.8, minLat:42.9, maxLat:47.6 },
+  { abbr:'ND', minLng:-104.1, maxLng:-96.4, minLat:45.9, maxLat:49.1 },
+  { abbr:'SD', minLng:-104.1, maxLng:-96.3, minLat:42.5, maxLat:45.95 },
+  { abbr:'NE', minLng:-104.1, maxLng:-95.2, minLat:40.0, maxLat:43.2 },
+  { abbr:'KS', minLng:-102.1, maxLng:-94.6, minLat:37.0, maxLat:40.1 },
+  { abbr:'OK', minLng:-103.1, maxLng:-94.4, minLat:33.6, maxLat:37.1 },
+  { abbr:'TX', minLng:-106.7, maxLng:-93.4, minLat:25.6, maxLat:36.6 },
+  { abbr:'NM', minLng:-109.2, maxLng:-103.0, minLat:31.2, maxLat:37.1 },
+  { abbr:'CO', minLng:-109.2, maxLng:-101.9, minLat:36.9, maxLat:41.1 },
+  { abbr:'WY', minLng:-111.2, maxLng:-104.0, minLat:41.0, maxLat:45.1 },
+  { abbr:'MT', minLng:-116.2, maxLng:-104.0, minLat:44.2, maxLat:49.1 },
+  { abbr:'ID', minLng:-117.3, maxLng:-111.0, minLat:41.9, maxLat:49.1 },
+  { abbr:'UT', minLng:-114.2, maxLng:-109.0, minLat:36.9, maxLat:42.1 },
+  { abbr:'AZ', minLng:-114.9, maxLng:-109.0, minLat:31.2, maxLat:37.1 },
+  { abbr:'NV', minLng:-120.1, maxLng:-114.0, minLat:35.0, maxLat:42.1 },
+  { abbr:'CA', minLng:-124.6, maxLng:-114.0, minLat:32.2, maxLat:42.1 },
+  { abbr:'OR', minLng:-124.8, maxLng:-116.3, minLat:41.9, maxLat:46.3 },
+  { abbr:'WA', minLng:-124.9, maxLng:-116.8, minLat:45.5, maxLat:49.1 },
+  { abbr:'LA', minLng:-94.1, maxLng:-88.8, minLat:28.8, maxLat:33.1 }
+];
+
+function normalizeStateText(value) {
+  const text = cleanLabel(value).replace(/\./g, '');
+  if (!text) return '';
+  const upper = text.toUpperCase();
+  if (STATE_ABBRS.has(upper)) return upper;
+  const lower = text.toLowerCase();
+  if (STATE_NAME_TO_ABBR[lower]) return STATE_NAME_TO_ABBR[lower];
+  return '';
+}
+
+function extractStateFromText(text) {
+  const cleaned = String(text || '').replace(/[.,]/g, ' ');
+  const direct = normalizeStateText(cleaned);
+  if (direct) return direct;
+  const upper = cleaned.toUpperCase();
+  const abbrMatch = upper.match(/(?:^|\s)(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)(?:\s|$)/);
+  if (abbrMatch) return abbrMatch[1];
+  const lower = cleaned.toLowerCase();
+  const names = Object.keys(STATE_NAME_TO_ABBR).sort((a, b) => b.length - a.length);
+  for (const name of names) {
+    if (lower.includes(name)) return STATE_NAME_TO_ABBR[name];
+  }
+  return '';
+}
+
+function approximateStateFromLngLat(lngLat) {
+  if (!Array.isArray(lngLat) || lngLat.length < 2) return '';
+  const [lng, lat] = lngLat;
+  for (const state of ROUGH_STATE_BOUNDS) {
+    if (lng >= state.minLng && lng <= state.maxLng && lat >= state.minLat && lat <= state.maxLat) return state.abbr;
+  }
+  return '';
+}
+
+function deriveState(raw, lngLat) {
+  const direct = normalizeStateText(getFieldAny(raw, ['state','stateAbbr','state_abbr','st','province','provinceAbbr','region','admin1','stateProvince','State','STATE']));
+  if (direct) return direct;
+  const textCandidates = [
+    getFieldAny(raw, ['address','location','place','cityState','city_state','mapsAddress','formatted_address']),
+    getFieldAny(raw, ['description','notes','summary']),
+    getFieldAny(raw, ['name','title','site','label'])
+  ].filter(Boolean);
+  for (const candidate of textCandidates) {
+    const parsed = extractStateFromText(candidate);
+    if (parsed) return parsed;
+  }
+  const allText = listAllValues(raw).join(' | ');
+  const parsedAny = extractStateFromText(allText);
+  if (parsedAny) return parsedAny;
+  return approximateStateFromLngLat(lngLat) || 'Unknown';
+}
+
 function normalizeCategory(rawCategory = '') {
-  const value = String(rawCategory).trim().toLowerCase();
+  const value = cleanLabel(rawCategory).toLowerCase();
   if (!value) return 'other';
-  if (value.includes('boondock') || value.includes('dispersed')) return 'boondocking';
+  if (value.includes('boondock') || value.includes('dispersed') || value.includes('primitive')) return 'boondocking';
+  if (value.includes('national forest')) return 'national_forest';
+  if (value.includes('state') && value.includes('modern')) return 'state_federal_modern';
+  if (value.includes('federal') && value.includes('modern')) return 'state_federal_modern';
+  if (value.includes('state') && value.includes('rustic')) return 'state_federal_rustic';
+  if (value.includes('federal') && value.includes('rustic')) return 'state_federal_rustic';
   if (value.includes('rustic')) return 'rustic';
   if (value.includes('modern')) return 'modern';
-  if (value.includes('trailhead')) return 'trailhead';
+  if (value.includes('trailhead') || value.includes('hike in')) return 'trailhead';
   if (value.includes('private')) return 'private';
-  return value;
+  if (value.includes('public')) return 'modern';
+  return makeSlug(value) || 'other';
 }
 
 function categoryFromText(text, fallback = 'other') {
@@ -185,44 +326,52 @@ function getLatLng(raw) {
 }
 
 function normalizeSite(raw, idx) {
-  const lngLat = getLatLng(raw);
+  const source = raw?.properties && typeof raw.properties === 'object' ? { ...raw.properties, geometry: raw.geometry, coordinates: raw.coordinates ?? raw.geometry?.coordinates } : raw;
+  const lngLat = getLatLng(source);
   if (!lngLat) return null;
-  const state = raw.state || raw.stateAbbr || raw.state_abbr || raw.region || raw.province || raw.admin1 || 'Unknown';
-  const category = normalizeCategory(raw.category || raw.type || raw.kind || raw.layer || raw.classification);
-  const layerInfo = deriveLayerInfo(raw, category);
-  const website = raw.website || raw.url || raw.link || raw.official_url || '';
+  const state = deriveState(source, lngLat);
+  const rawCategory = getFieldAny(source, ['category','type','kind','layer','classification','bucket','campType','camp_type','style','accessType','ownershipType']) || '';
+  const category = normalizeCategory(rawCategory || `${getFieldAny(source, ['layerLabel','layer_name','layerName','layer','group','collection']) || ''} ${getFieldAny(source, ['owner','ownership','manager','agency','system','landManager']) || ''}`);
+  const layerInfo = deriveLayerInfo(source, category);
+  const website = getFieldAny(source, ['website','url','link','official_url','officialUrl']) || '';
+  const name = getFieldAny(source, ['name','title','site','label','campground','campgroundName']) || `Untitled site ${idx + 1}`;
+  const description = getFieldAny(source, ['description','notes','summary','reviewSummary']) || '';
+  const access = getFieldAny(source, ['access','road_access','roadAccess']) || '';
+  const cost = getFieldAny(source, ['cost','price','fee']) || '';
+  const showers = getFieldAny(source, ['showers','hasShowers']) || '';
+  const id = getFieldAny(source, ['id','siteId','site_id']) || `site-${idx}`;
   return {
-    id: raw.id || `site-${idx}`,
-    name: raw.name || raw.title || raw.site || raw.label || `Untitled site ${idx + 1}`,
-    state: String(state).trim() || 'Unknown',
+    id,
+    name,
+    state,
     category,
     layerKey: layerInfo.key,
     layerLabel: layerInfo.label,
     bucket: layerInfo.bucket,
-    description: raw.description || raw.notes || raw.summary || '',
+    description,
     website,
     navigateUrl: `https://www.google.com/maps?q=${lngLat[1]},${lngLat[0]}`,
-    access: raw.access || raw.road_access || '',
-    cost: raw.cost || raw.price || '',
-    showers: raw.showers || '',
-    raw,
+    access,
+    cost,
+    showers,
+    raw: source,
     lngLat,
     feature: {
       type: 'Feature',
       properties: {
-        id: raw.id || `site-${idx}`,
-        name: raw.name || raw.title || raw.site || raw.label || `Untitled site ${idx + 1}`,
-        state: String(state).trim() || 'Unknown',
+        id,
+        name,
+        state,
         category,
         layerKey: layerInfo.key,
         layerLabel: layerInfo.label,
         bucket: layerInfo.bucket,
-        description: raw.description || raw.notes || raw.summary || '',
+        description,
         website,
         navigateUrl: `https://www.google.com/maps?q=${lngLat[1]},${lngLat[0]}`,
-        access: raw.access || raw.road_access || '',
-        cost: raw.cost || raw.price || '',
-        showers: raw.showers || ''
+        access,
+        cost,
+        showers
       },
       geometry: { type: 'Point', coordinates: lngLat }
     }
@@ -402,8 +551,28 @@ function focusedOnSingleState() {
   return null;
 }
 
+function visibleStatesInViewport() {
+  if (!model.map) return [];
+  const bounds = model.map.getBounds();
+  const states = new Set();
+  for (const site of enabledSites()) {
+    if (bounds.contains(site.lngLat)) states.add(site.state);
+  }
+  return [...states];
+}
+
 function shouldShowSiteDetails() {
-  return model.map.getZoom() >= DETAIL_ZOOM || Boolean(focusedOnSingleState());
+  if (!model.map) return false;
+  const zoom = model.map.getZoom();
+  if (zoom >= DETAIL_ZOOM) return true;
+  if (Boolean(focusedOnSingleState())) return true;
+  const bounds = model.map.getBounds();
+  const lngSpan = Math.abs(bounds.getEast() - bounds.getWest());
+  const latSpan = Math.abs(bounds.getNorth() - bounds.getSouth());
+  const visibleStates = visibleStatesInViewport();
+  if (visibleStates.length <= 1 && lngSpan <= 12 && latSpan <= 8) return true;
+  if (visibleStates.length <= 2 && zoom >= (DETAIL_ZOOM - 0.8)) return true;
+  return false;
 }
 
 function enabledSites() {
