@@ -14,10 +14,11 @@
 <body>
   <div id="appShell">
     <div id="map"></div>
+    <div id="zoomReadout" aria-live="polite">Zoom: --</div>
 
     <button id="menuToggle" aria-label="Menu" title="Map options">☰</button>
 
-    <aside id="menuPanel" class="is-open">
+    <aside id="menuPanel" class="is-open" aria-hidden="false">
       <div class="panel-header">
         <div>
           <h1>Camping Map <span id="versionTag">v18.0</span></h1>

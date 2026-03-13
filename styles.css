@@ -162,3 +162,53 @@ body { overflow: hidden; }
   .key-row { grid-template-columns: 1fr; }
   .counts-grid { grid-template-columns: 1fr 1fr; }
 }
+
+
+#zoomReadout {
+  position: fixed;
+  right: 12px;
+  bottom: max(12px, calc(env(safe-area-inset-bottom) + 10px));
+  z-index: 99997;
+  background: rgba(14, 26, 22, 0.9);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font: 600 14px/1.1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+
+.site-dom-marker.is-rustic { border-radius: 24% !important; }
+.site-dom-marker.is-modern { border-radius: 999px !important; }
+
+@media (max-width: 760px) {
+  #menuPanel {
+    top: 0 !important;
+    left: 0;
+    width: min(92vw, 420px);
+    max-height: 100dvh;
+    height: 100dvh;
+    border-radius: 0 18px 18px 0;
+    padding-top: max(18px, calc(env(safe-area-inset-top) + 12px));
+    padding-bottom: max(18px, calc(env(safe-area-inset-bottom) + 12px));
+    transform: translateX(0);
+    transition: transform 0.22s ease, opacity 0.22s ease;
+  }
+  #menuPanel.is-collapsed {
+    display: block;
+    transform: translateX(calc(-100% - 18px));
+    opacity: 0;
+    pointer-events: none;
+  }
+  #menuToggle {
+    top: max(10px, calc(env(safe-area-inset-top) + 8px)) !important;
+    left: 10px !important;
+    width: 60px !important;
+    height: 60px !important;
+  }
+  #zoomReadout {
+    right: 10px;
+    bottom: max(10px, calc(env(safe-area-inset-bottom) + 8px));
+  }
+}

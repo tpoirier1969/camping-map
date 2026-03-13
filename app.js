@@ -1,6 +1,6 @@
-const VERSION = 'v18.10';
+const VERSION = 'v18.20';
 const SITE_DATA_URLS = ['data/sites.json', 'data/site-data.json', 'data/campgrounds.json', 'sites.json'];
-const TRAIL_DATA_URLS = []; // intentionally disabled until accurate trail data is provided
+const TRAIL_DATA_URLS = ['data/trails.geojson', 'data/trails.json', 'trails.geojson'];
 const DEFAULT_CENTER = [-87.4, 46.6];
 const DEFAULT_ZOOM = 6;
 const DETAIL_ZOOM = 5.2;
@@ -13,14 +13,12 @@ const STORAGE_KEYS = {
   tilt: 'campingMap.pitch'
 };
 const BUILTIN_BUCKETS = {
-  modern: { label: 'Modern', color: '#2a7fff', radius: 13 },
-  rustic: { label: 'Rustic', color: '#a46a24', radius: 13 },
-  boondocking: { label: 'Boondocking / dispersed', color: '#3f8c53', radius: 13 },
+  federal: { label: 'Federal campgrounds', color: '#2a7fff', radius: 13 },
+  state: { label: 'State campgrounds', color: '#177e89', radius: 13 },
+  local: { label: 'Local campgrounds', color: '#8f5f2a', radius: 13 },
   private: { label: 'Private campgrounds', color: '#cf4f7d', radius: 13 },
+  boondocking: { label: 'Boondocking / dispersed', color: '#3f8c53', radius: 13 },
   national_forest: { label: 'National forest campgrounds', color: '#1f8a70', radius: 13 },
-  state_federal_modern: { label: 'State / federal modern campgrounds', color: '#2a7fff', radius: 13 },
-  state_federal_rustic: { label: 'State / federal rustic campgrounds', color: '#a46a24', radius: 11 },
-  state_local: { label: 'State / local campgrounds', color: '#177e89', radius: 13 },
   trailhead: { label: 'Trailheads', color: '#8e5bd6', radius: 13 },
   other: { label: 'Other campsites', color: '#949494', radius: 13 },
   state_summary: { label: 'State summary', color: '#7f4dff', radius: 24 },
@@ -48,7 +46,8 @@ const els = {
   basemapSelect: document.getElementById('basemapSelect'),
   toggleTerrain: document.getElementById('toggleTerrain'),
   togglePitch: document.getElementById('togglePitch'),
-  toggleAddMode: document.getElementById('toggleAddMode')
+  toggleAddMode: document.getElementById('toggleAddMode'),
+  zoomReadout: document.getElementById('zoomReadout')
 };
 els.versionTag.textContent = VERSION;
 if (els.toggleStateSummaries) els.toggleStateSummaries.checked = true;
@@ -108,52 +107,37 @@ function ensureBasemapOptions() {
   }
 }
 
-function markerShapeForBucket(bucket) {
-  switch (bucket) {
-    case 'modern':
-    case 'state_federal_modern':
-      return 'circle';
-    case 'rustic':
-    case 'state_federal_rustic':
-      return 'rounded-square';
-    case 'boondocking':
-      return 'diamond';
-    case 'national_forest':
-      return 'hexagon';
-    case 'private':
-      return 'pill';
-    case 'state_local':
-      return 'octagon';
-    case 'trailhead':
-      return 'triangle';
-    default:
-      return 'circle';
-  }
+function markerShapeForSite(siteOrBucket, siteKind = '') {
+  const bucket = typeof siteOrBucket === 'string' ? siteOrBucket : (siteOrBucket?.bucket || 'other');
+  const kind = String(typeof siteOrBucket === 'object' ? (siteOrBucket?.siteKind || '') : siteKind).toLowerCase();
+  if (bucket === 'boondocking') return 'diamond';
+  if (bucket === 'trailhead') return 'triangle';
+  if (kind === 'rustic') return 'rounded-square';
+  if (kind === 'modern') return 'circle';
+  if (bucket === 'private') return 'pill';
+  return 'circle';
 }
 
-function applyMarkerShape(el, bucket) {
-  const shape = markerShapeForBucket(bucket);
+function applyMarkerShape(el, siteOrBucket, siteKind = '') {
+  const shape = markerShapeForSite(siteOrBucket, siteKind);
   el.style.borderRadius = '50%';
   el.style.clipPath = 'none';
   el.style.transform = 'none';
   if (shape === 'rounded-square') {
-    el.style.borderRadius = '26%';
+    el.style.borderRadius = '24%';
   } else if (shape === 'diamond') {
     el.style.borderRadius = '18%';
     el.style.transform = 'rotate(45deg)';
-  } else if (shape === 'hexagon') {
-    el.style.clipPath = 'polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0 50%)';
   } else if (shape === 'pill') {
     el.style.borderRadius = '999px';
-    el.style.width = '22px';
-  } else if (shape === 'octagon') {
-    el.style.clipPath = 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)';
+    el.style.width = '24px';
   } else if (shape === 'triangle') {
     el.style.clipPath = 'polygon(50% 4%, 96% 88%, 4% 88%)';
     el.style.borderRadius = '0';
   }
   return shape;
 }
+
 
 function escapeHtml(value) {
   return String(value)
@@ -323,68 +307,73 @@ function deriveState(raw, lngLat) {
 
 function normalizeCategory(rawCategory = '') {
   const value = cleanLabel(rawCategory).toLowerCase();
-  if (!value) return 'other';
+  if (!value) return '';
   if (value.includes('boondock') || value.includes('dispersed') || value.includes('primitive')) return 'boondocking';
   if (value.includes('national forest')) return 'national_forest';
-  if ((value.includes('state') || value.includes('county') || value.includes('local') || value.includes('municipal') || value.includes('city')) && value.includes('camp')) return 'state_local';
-  if (value.includes('state') && value.includes('modern')) return 'state_federal_modern';
-  if ((value.includes('county') || value.includes('local') || value.includes('municipal') || value.includes('city')) && value.includes('camp')) return 'state_local';
-  if (value.includes('federal') && value.includes('modern')) return 'state_federal_modern';
-  if (value.includes('state') && value.includes('rustic')) return 'state_federal_rustic';
-  if (value.includes('federal') && value.includes('rustic')) return 'state_federal_rustic';
-  if (value.includes('rustic')) return 'rustic';
-  if (value.includes('modern')) return 'modern';
   if (value.includes('trailhead') || value.includes('hike in')) return 'trailhead';
   if (value.includes('private')) return 'private';
+  if (value.includes('rustic')) return 'rustic';
+  if (value.includes('modern')) return 'modern';
+  if (value.includes('state') || value.includes('federal') || value.includes('local') || value.includes('county') || value.includes('municipal') || value.includes('city')) return value;
   if (value.includes('public')) return 'modern';
-  return makeSlug(value) || 'other';
+  return makeSlug(value) || '';
 }
+
 
 function categoryFromText(text, fallback = 'other') {
   const value = String(text || '').toLowerCase();
   if (value.includes('boondock') || value.includes('dispersed')) return 'boondocking';
   if (value.includes('national forest')) return 'national_forest';
-  if ((value.includes('state') || value.includes('county') || value.includes('local') || value.includes('municipal') || value.includes('city')) && value.includes('camp')) return 'state_local';
-  if (value.includes('state') && value.includes('modern')) return 'state_federal_modern';
-  if ((value.includes('county') || value.includes('local') || value.includes('municipal') || value.includes('city')) && value.includes('camp')) return 'state_local';
-  if (value.includes('federal') && value.includes('modern')) return 'state_federal_modern';
-  if (value.includes('state') && value.includes('rustic')) return 'state_federal_rustic';
-  if (value.includes('federal') && value.includes('rustic')) return 'state_federal_rustic';
   if (value.includes('private')) return 'private';
-  if (value.includes('modern')) return 'modern';
-  if (value.includes('rustic')) return 'rustic';
   if (value.includes('trailhead')) return 'trailhead';
+  if (value.includes('rustic')) return 'rustic';
+  if (value.includes('modern')) return 'modern';
   return BUILTIN_BUCKETS[fallback] ? fallback : 'other';
 }
 
-function deriveLayerInfo(raw, category) {
-  const layerish = raw.layerLabel || raw.layer_name || raw.layerName || raw.layer || raw.mapLayer || raw.group || raw.collection || '';
-  const ownerText = cleanLabel(raw.owner || raw.ownership || raw.manager || raw.agency || raw.system || raw.landManager || '').toLowerCase();
-  const typeText = cleanLabel(raw.type || raw.kind || raw.category || raw.classification || '').toLowerCase();
-  const combined = `${layerish} ${ownerText} ${typeText}`.trim();
 
-  if (layerish) {
-    return { key: makeSlug(layerish) || `layer-${category}`, label: titleCase(layerish), bucket: categoryFromText(combined, category) };
+function deriveLayerInfo(raw, category, siteKind = '') {
+  const ownerText = cleanLabel(raw.owner || raw.ownership || raw.manager || raw.agency || raw.system || raw.landManager || raw.operator || '').toLowerCase();
+  const layerish = cleanLabel(raw.layerLabel || raw.layer_name || raw.layerName || raw.layer || raw.mapLayer || raw.group || raw.collection || '');
+  const combined = `${layerish} ${ownerText} ${category} ${siteKind}`.toLowerCase();
+
+  let bucket = 'other';
+  let label = 'Other campsites';
+  let key = 'other-campgrounds';
+
+  if (combined.includes('boondock') || combined.includes('dispersed')) {
+    bucket = 'boondocking';
+    label = 'Boondocking / Dispersed';
+    key = 'boondocking';
+  } else if (combined.includes('national forest') || ownerText.includes('usfs') || ownerText.includes('forest service')) {
+    bucket = 'federal';
+    label = 'Federal Campgrounds';
+    key = 'federal-campgrounds';
+  } else if (combined.includes('federal') || combined.includes('national park') || ownerText.includes('nps') || ownerText.includes('army corps') || ownerText.includes('corps of engineers') || ownerText.includes('bureau of land management') || ownerText.includes('blm')) {
+    bucket = 'federal';
+    label = 'Federal Campgrounds';
+    key = 'federal-campgrounds';
+  } else if (combined.includes('state') || ownerText.includes('dnr') || ownerText.includes('michigan department of natural resources') || ownerText.includes('state park') || ownerText.includes('recreation area')) {
+    bucket = 'state';
+    label = 'State Campgrounds';
+    key = 'state-campgrounds';
+  } else if (combined.includes('county') || combined.includes('municipal') || combined.includes('township') || combined.includes('city') || combined.includes('local')) {
+    bucket = 'local';
+    label = 'Local Campgrounds';
+    key = 'local-campgrounds';
+  } else if (combined.includes('private')) {
+    bucket = 'private';
+    label = 'Private Campgrounds';
+    key = 'private-campgrounds';
+  } else if (combined.includes('trailhead') || combined.includes('hike in')) {
+    bucket = 'trailhead';
+    label = 'Trailheads';
+    key = 'trailheads';
   }
-  if (ownerText.includes('private')) return { key: 'private-campgrounds', label: 'Private Campgrounds', bucket: 'private' };
-  if (ownerText.includes('county') || ownerText.includes('local') || ownerText.includes('municipal') || ownerText.includes('city')) {
-    return { key: 'state-local-campgrounds', label: 'State / Local Campgrounds', bucket: 'state_local' };
-  }
-  if ((ownerText.includes('state') || ownerText.includes('federal') || ownerText.includes('national')) && category === 'modern') {
-    return { key: 'state-federal-modern-campgrounds', label: 'State / Federal Campgrounds - Modern', bucket: 'state_federal_modern' };
-  }
-  if ((ownerText.includes('state') || ownerText.includes('federal') || ownerText.includes('national')) && category === 'rustic') {
-    return { key: 'state-federal-rustic-campgrounds', label: 'State / Federal Campgrounds - Rustic', bucket: 'state_federal_rustic' };
-  }
-  if (combined.includes('national forest')) return { key: 'national-forest-campgrounds', label: 'National Forest Campgrounds', bucket: 'national_forest' };
-  if (category === 'boondocking') return { key: 'boondocking', label: 'Boondocking', bucket: 'boondocking' };
-  if (category === 'modern') return { key: 'modern-campgrounds', label: 'Modern Campgrounds', bucket: 'modern' };
-  if (category === 'rustic') return { key: 'rustic-campgrounds', label: 'Rustic Campgrounds', bucket: 'rustic' };
-  if (category === 'private') return { key: 'private-campgrounds', label: 'Private Campgrounds', bucket: 'private' };
-  if (category === 'state_local') return { key: 'state-local-campgrounds', label: 'State / Local Campgrounds', bucket: 'state_local' };
-  if (category === 'trailhead') return { key: 'trailheads', label: 'Trailheads', bucket: 'trailhead' };
-  return { key: category ? `${makeSlug(category)}-sites` : 'other-sites', label: category ? `${titleCase(category)} Sites` : 'Other Campsites', bucket: categoryFromText(combined, category) };
+
+  return { key, label, bucket };
 }
+
 
 function normalizeLngLatPair(a, b) {
   const n1 = Number(a);
@@ -438,8 +427,16 @@ function normalizeSite(raw, idx) {
   if (!lngLat) return null;
   const state = deriveState(source, lngLat);
   const rawCategory = getFieldAny(source, ['category','type','kind','layer','classification','bucket','campType','camp_type','style','accessType','ownershipType']) || '';
-  const category = normalizeCategory(rawCategory || `${getFieldAny(source, ['layerLabel','layer_name','layerName','layer','group','collection']) || ''} ${getFieldAny(source, ['owner','ownership','manager','agency','system','landManager']) || ''}`);
-  const layerInfo = deriveLayerInfo(source, category);
+  const categorySeed = `${rawCategory} ${getFieldAny(source, ['layerLabel','layer_name','layerName','layer','group','collection']) || ''} ${getFieldAny(source, ['owner','ownership','manager','agency','system','landManager','operator']) || ''}`;
+  const category = normalizeCategory(categorySeed);
+  let siteKind = '';
+  const siteKindText = `${rawCategory} ${getFieldAny(source, ['campType','camp_type','style']) || ''}`.toLowerCase();
+  if (siteKindText.includes('rustic')) siteKind = 'rustic';
+  else if (siteKindText.includes('modern')) siteKind = 'modern';
+  else if (category === 'rustic') siteKind = 'rustic';
+  else if (category === 'modern') siteKind = 'modern';
+
+  const layerInfo = deriveLayerInfo(source, category, siteKind);
   const website = getFieldAny(source, ['website','url','link','official_url','officialUrl']) || '';
   const name = getFieldAny(source, ['name','title','site','label','campground','campgroundName']) || `Untitled site ${idx + 1}`;
   const description = getFieldAny(source, ['description','notes','summary','reviewSummary']) || '';
@@ -452,6 +449,7 @@ function normalizeSite(raw, idx) {
     name,
     state,
     category,
+    siteKind,
     layerKey: layerInfo.key,
     layerLabel: layerInfo.label,
     bucket: layerInfo.bucket,
@@ -470,6 +468,7 @@ function normalizeSite(raw, idx) {
         name,
         state,
         category,
+        siteKind,
         layerKey: layerInfo.key,
         layerLabel: layerInfo.label,
         bucket: layerInfo.bucket,
@@ -482,6 +481,54 @@ function normalizeSite(raw, idx) {
       },
       geometry: { type: 'Point', coordinates: lngLat }
     }
+  };
+}
+
+
+
+function trailBucketColor(bucket) {
+  return (BUILTIN_BUCKETS[bucket] || BUILTIN_BUCKETS.other).color;
+}
+
+function classifyTrailFeature(feature) {
+  const props = feature?.properties || {};
+  const text = listAllValues(props).join(' | ').toLowerCase();
+  const name = String(props.name || props.title || props.trail || '').toLowerCase();
+  const isLongDistance = /north country trail|iron ore heritage|white pine|kal[- ]?haven|bill nichols|haywire|paint creek|polly ann|betsie valley|lakelands|north western state trail|fred meijer|rail trail|heritage trail/.test(`${name} ${text}`);
+  let bucket = 'other';
+  if (isLongDistance) bucket = 'trail';
+  else if (text.includes('national forest') || text.includes('federal') || text.includes('national park') || text.includes('nps') || text.includes('forest service') || text.includes('usfs')) bucket = 'federal';
+  else if (text.includes('state park') || text.includes('state recreation area') || text.includes('dnr') || text.includes('state')) bucket = 'state';
+  else if (text.includes('county') || text.includes('city') || text.includes('municipal') || text.includes('local') || text.includes('township')) bucket = 'local';
+  else if (text.includes('private')) bucket = 'private';
+  else if (text.includes('boondock') || text.includes('dispersed')) bucket = 'boondocking';
+  const color = bucket === 'trail' ? BUILTIN_BUCKETS.trail.color : trailBucketColor(bucket);
+  const width = isLongDistance ? 4 : 2.4;
+  return {
+    ...feature,
+    properties: {
+      ...props,
+      name: props.name || props.title || props.trail || 'Trail',
+      trailBucket: bucket,
+      color,
+      width,
+      isLongDistance
+    }
+  };
+}
+
+function normalizeTrailCollection(trailsRaw) {
+  const base = Array.isArray(trailsRaw?.features)
+    ? trailsRaw
+    : Array.isArray(trailsRaw)
+      ? { type: 'FeatureCollection', features: trailsRaw }
+      : { type: 'FeatureCollection', features: [] };
+  return {
+    type: 'FeatureCollection',
+    features: (base.features || []).filter((feature) => {
+      const type = feature?.geometry?.type;
+      return type === 'LineString' || type === 'MultiLineString';
+    }).map(classifyTrailFeature)
   };
 }
 
@@ -547,19 +594,19 @@ async function loadData() {
   model.dataLoad.trailsError = '';
   refreshStatusText();
 
-  const [sitesRaw] = await Promise.all([
+  const [sitesRaw, trailsRaw] = await Promise.all([
     loadFirstAvailable(SITE_DATA_URLS, 'sites').finally(() => {
       model.dataLoad.loadingSites = false;
       refreshStatusText();
     }),
-    Promise.resolve(null).finally(() => {
+    loadFirstAvailable(TRAIL_DATA_URLS, 'trails').finally(() => {
       model.dataLoad.loadingTrails = false;
       refreshStatusText();
     })
   ]);
 
   model.sites = normalizeSiteArray(sitesRaw).map(normalizeSite).filter(Boolean);
-  model.trails = null;
+  model.trails = normalizeTrailCollection(trailsRaw);
 
   buildLayerDefinitions();
   buildStateGroups();
@@ -640,7 +687,7 @@ function renderLayerControls() {
 function renderLegend() {
   const items = [{ type: 'dot', label: 'State summary', color: BUILTIN_BUCKETS.state_summary.color }];
   for (const def of model.layerDefs.values()) items.push({ type: 'dot', label: def.label, color: def.color });
-  if (model.trails?.features?.length) items.push({ type: 'line', label: 'Trail overlay', color: BUILTIN_BUCKETS.trail.color });
+  if (model.trails?.features?.length) { items.push({ type: 'line', label: 'Long-distance / regional trails', color: BUILTIN_BUCKETS.trail.color }); items.push({ type: 'line', label: 'State / federal / local trail colors match campground types', color: '#cccccc' }); }
   items.push({ type: 'dot', label: 'Draft site', color: BUILTIN_BUCKETS.draft.color });
   els.legendList.innerHTML = items.map((item) => `<div class="legend-item">${item.type === 'line' ? `<span class="legend-line" style="border-top-color:${escapeAttribute(item.color)}"></span>` : `<span class="legend-dot" style="background:${escapeAttribute(item.color)}"></span>`}<span>${escapeHtml(item.label)}</span></div>`).join('');
 }
@@ -648,7 +695,7 @@ function renderLegend() {
 function syncTrailUi() {
   const hasTrails = Boolean(model.trails?.features?.length);
   els.trailSection.hidden = !hasTrails;
-  els.trailStatusText.textContent = hasTrails ? 'Labeled trail overlay loaded.' : 'No trail overlay loaded.';
+  els.trailStatusText.textContent = hasTrails ? 'Trail overlay loaded. Orange = long-distance/regional trails; other colors follow campground ownership.' : 'No trail overlay loaded.';
 }
 
 function getPaddedBounds(bounds, factor = STATE_PADDING_FACTOR) {
@@ -764,7 +811,7 @@ function popupHtmlForSite(props) {
   if (props.cost) parts.push(`<div><strong>Cost:</strong> ${escapeHtml(props.cost)}</div>`);
   if (props.showers) parts.push(`<div><strong>Showers:</strong> ${escapeHtml(props.showers)}</div>`);
   if (props.description) parts.push(`<div>${escapeHtml(props.description)}</div>`);
-  return `<div class="popup-content"><div class="popup-title">${escapeHtml(props.name)}</div><div class="popup-meta">${escapeHtml(props.state)} · ${escapeHtml(props.layerLabel)}</div>${parts.join('')}<div class="popup-actions"><a href="${escapeAttribute(props.navigateUrl)}" target="_blank" rel="noopener noreferrer">Navigate</a>${props.website ? `<a href="${escapeAttribute(props.website)}" target="_blank" rel="noopener noreferrer">Website</a>` : ''}</div></div>`;
+  return `<div class="popup-content"><div class="popup-title">${escapeHtml(props.name)}</div><div class="popup-meta">${escapeHtml(props.state)} · ${escapeHtml(props.layerLabel)}${props.siteKind ? ` · ${escapeHtml(titleCase(props.siteKind))}` : ''}</div>${parts.join('')}<div class="popup-actions"><a href="${escapeAttribute(props.navigateUrl)}" target="_blank" rel="noopener noreferrer">Navigate</a>${props.website ? `<a href="${escapeAttribute(props.website)}" target="_blank" rel="noopener noreferrer">Website</a>` : ''}</div></div>`;
 }
 
 function popupHtmlForState(props) {
@@ -824,7 +871,7 @@ function attachPopupHandlers() {
   });
 
   if (model.trails?.features?.length) {
-    model.map.on('click', 'trails-line', (event) => {
+    ['trails-line','trails-major-line'].forEach((trailLayerId) => model.map.on('click', trailLayerId, (event) => {
       const feature = event.features?.[0];
       if (!feature) return;
       const coords = event.lngLat;
@@ -833,7 +880,7 @@ function attachPopupHandlers() {
         .setLngLat([coords.lng, coords.lat])
         .setHTML(`<div class="popup-content"><div class="popup-title">${escapeHtml(p.name || p.title || 'Trail')}</div><div class="popup-meta">${escapeHtml(p.note || p.description || 'Trail overlay')}</div>${p.url ? `<div><a href="${escapeAttribute(p.url)}" target="_blank" rel="noopener noreferrer">More info</a></div>` : ''}</div>`)
         .addTo(model.map);
-    });
+    }));
   }
 }
 
@@ -852,7 +899,7 @@ function addLayerIfMissing(layerDef, beforeId) {
 }
 
 function moveOverlayLayersToTop() {
-  const order = ['trails-line', 'state-summary-circles', 'state-summary-labels', 'sites-circles', 'draft-circle', 'draft-label', 'trails-labels'];
+  const order = ['trails-line', 'trails-major-line', 'trails-labels', 'state-summary-circles', 'state-summary-labels', 'sites-circles', 'draft-circle', 'draft-label'];
   for (const id of order) {
     if (model.map.getLayer(id)) {
       try { model.map.moveLayer(id); } catch {}
@@ -877,10 +924,13 @@ function applyOverlaySourcesAndLayers() {
   }
 
   addLayerIfMissing({
-    id: 'trails-line', type: 'line', source: 'trails', layout: { visibility: 'none' }, paint: { 'line-color': BUILTIN_BUCKETS.trail.color, 'line-width': 3.5, 'line-opacity': 0.9 }
+    id: 'trails-line', type: 'line', source: 'trails', layout: { visibility: 'none', 'line-cap': 'round', 'line-join': 'round' }, filter: ['==', ['get', 'isLongDistance'], false], paint: { 'line-color': ['coalesce', ['get', 'color'], '#cccccc'], 'line-width': ['coalesce', ['get', 'width'], 2.4], 'line-opacity': 0.88 }
   }, beforeId);
   addLayerIfMissing({
-    id: 'trails-labels', type: 'symbol', source: 'trail-labels', layout: { visibility: 'none', 'text-field': ['get', 'name'], 'text-size': 13, 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'] }, paint: { 'text-color': '#ffffff', 'text-halo-color': 'rgba(0,0,0,0.85)', 'text-halo-width': 1.8 }
+    id: 'trails-major-line', type: 'line', source: 'trails', layout: { visibility: 'none', 'line-cap': 'round', 'line-join': 'round' }, filter: ['==', ['get', 'isLongDistance'], true], paint: { 'line-color': BUILTIN_BUCKETS.trail.color, 'line-width': ['coalesce', ['get', 'width'], 4], 'line-opacity': 0.95 }
+  }, beforeId);
+  addLayerIfMissing({
+    id: 'trails-labels', type: 'symbol', source: 'trail-labels', layout: { visibility: 'none', 'text-field': ['get', 'name'], 'text-size': 12, 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'] }, paint: { 'text-color': '#ffffff', 'text-halo-color': 'rgba(0,0,0,0.85)', 'text-halo-width': 1.8 }
   });
 
   addLayerIfMissing({
@@ -931,7 +981,7 @@ function applyOverlaySourcesAndLayers() {
 }
 
 function attachCursorStates() {
-  ['sites-circles', 'state-summary-circles', 'trails-line', 'draft-circle'].forEach((layerId) => {
+  ['sites-circles', 'state-summary-circles', 'trails-line', 'trails-major-line', 'draft-circle'].forEach((layerId) => {
     if (!model.map.getLayer(layerId)) return;
     model.map.on('mouseenter', layerId, () => { model.map.getCanvas().style.cursor = 'pointer'; });
     model.map.on('mouseleave', layerId, () => { model.map.getCanvas().style.cursor = ''; });
@@ -965,9 +1015,11 @@ function updateOverlays() {
   setLayerVisibility('sites-circles', els.toggleSitePoints.checked && showDetails);
   setLayerVisibility('state-summary-circles', els.toggleStateSummaries.checked && !showDetails && enabledSites().length > 0);
   setLayerVisibility('state-summary-labels', els.toggleStateSummaries.checked && !showDetails);
+  const zoom = model.map.getZoom();
   const showTrails = !els.trailSection.hidden && els.toggleTrails.checked;
-  setLayerVisibility('trails-line', showTrails);
-  setLayerVisibility('trails-labels', showTrails);
+  setLayerVisibility('trails-major-line', showTrails && zoom >= 9);
+  setLayerVisibility('trails-line', showTrails && zoom >= 11);
+  setLayerVisibility('trails-labels', showTrails && zoom >= 11.5);
   setLayerVisibility('draft-circle', Boolean(model.draftFeature));
   setLayerVisibility('draft-label', Boolean(model.draftFeature));
   renderDirectSiteMarkers();
@@ -1009,7 +1061,9 @@ function renderDirectSiteMarkers() {
     el.style.padding = '0';
     el.style.margin = '0';
     el.style.cursor = 'pointer';
-    const appliedShape = applyMarkerShape(el, def.bucket || site.bucket || site.category);
+    const appliedShape = applyMarkerShape(el, site);
+    if (site.siteKind === 'rustic') el.classList.add('is-rustic');
+    if (site.siteKind === 'modern') el.classList.add('is-modern');
 
     el.addEventListener('click', (ev) => {
       ev.stopPropagation();
@@ -1082,9 +1136,11 @@ function refreshStatusText() {
     ? ' Loading trail data…'
     : model.trails?.features?.length
       ? ` Trail overlay loaded from ${model.dataLoad.trailsUrl || 'trail file'}.`
-      : model.dataLoad.trailsAttempted.length
-        ? ` Trail overlay missing. Tried: ${describeAttempts(model.dataLoad.trailsAttempted)}`
-        : '';
+      : model.dataLoad.trailsUrl
+        ? ` Trail file found at ${model.dataLoad.trailsUrl}, but it does not contain any line features yet.`
+        : model.dataLoad.trailsAttempted.length
+          ? ` Trail overlay missing. Tried: ${describeAttempts(model.dataLoad.trailsAttempted)}`
+          : '';
 
   const basemapLabel = model.mapStyleMode === 'satellite'
     ? 'Satellite'
@@ -1101,9 +1157,18 @@ function refreshStatusText() {
   els.statusText.textContent = `${siteMsg}${mapMsg}${trailMsg}`;
 }
 
+
+function updateZoomReadout() {
+  if (!els.zoomReadout || !model.map) return;
+  const zoom = model.map.getZoom();
+  els.zoomReadout.textContent = `Zoom: ${zoom.toFixed(1)}`;
+}
+
 function bindUi() {
-  els.menuToggle.addEventListener('click', () => els.menuPanel.classList.toggle('is-collapsed'));
-  els.closeMenu.addEventListener('click', () => els.menuPanel.classList.add('is-collapsed'));
+  const syncMenuState = () => { const collapsed = els.menuPanel.classList.contains('is-collapsed'); els.menuPanel.setAttribute('aria-hidden', collapsed ? 'true' : 'false'); };
+  els.menuToggle.addEventListener('click', () => { els.menuPanel.classList.toggle('is-collapsed'); syncMenuState(); });
+  els.closeMenu.addEventListener('click', () => { els.menuPanel.classList.add('is-collapsed'); syncMenuState(); });
+  syncMenuState();
   els.toggleStateSummaries.addEventListener('change', updateOverlays);
   els.toggleSitePoints.addEventListener('change', updateOverlays);
   els.toggleTrails?.addEventListener('change', updateOverlays);
@@ -1237,9 +1302,10 @@ function initMap() {
     scheduleMarkerRefresh();
     refreshStatusText();
   });
-  model.map.on('moveend', updateOverlays);
-  model.map.on('zoomend', updateOverlays);
-  model.map.on('idle', () => { if (shouldShowSiteDetails()) renderDirectSiteMarkers(); });
+  model.map.on('moveend', () => { updateZoomReadout(); updateOverlays(); });
+  model.map.on('zoom', updateZoomReadout);
+  model.map.on('zoomend', () => { updateZoomReadout(); updateOverlays(); });
+  model.map.on('idle', () => { updateZoomReadout(); if (shouldShowSiteDetails()) renderDirectSiteMarkers(); });
 
   model.map.on('click', (event) => {
     if (!model.addMode) return;
@@ -1281,6 +1347,7 @@ function initMap() {
 async function main() {
   bindUi();
   initMap();
+  updateZoomReadout();
   window.campingMapDebug = {
     model,
     reloadData: loadData,
