@@ -1,10 +1,6 @@
 {
-  "type": "vector-tiles",
   "sourceLayer": "trails",
-  "tiles": [
-    "data/tiles/trails/{z}/{x}/{y}.pbf"
-  ],
+  "tiles": [],
   "minzoom": 0,
-  "maxzoom": 14,
-  "notes": "Drop generated .pbf vector tiles into data/tiles/trails/. If this manifest is present and points to real tiles, the map will prefer vector tiles over GeoJSON."
+  "maxzoom": 14
 }

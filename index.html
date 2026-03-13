@@ -14,22 +14,19 @@
 <body>
   <div id="appShell">
     <div id="map"></div>
-    <div id="zoomReadout" aria-live="polite">Zoom: --</div>
 
     <button id="menuToggle" aria-label="Menu" title="Map options">☰</button>
 
     <aside id="menuPanel" class="is-open">
       <div class="panel-header">
         <div>
-          <h1>Camping Map <span id="versionTag">v18.0</span></h1>
+          <h1>Camping Map <span id="versionTag">v18.6</span></h1>
           <p id="statusText">Loading map data…</p>
         </div>
         <button id="closeMenu" class="ghost-button" aria-label="Close menu">✕</button>
       </div>
 
-      <button id="revealKeySectionBtn" class="ghost-button manage-key-button" type="button" hidden>Map key saved — manage</button>
-
-      <section class="panel-section key-section" id="keySection">
+      <section class="panel-section key-section">
         <h2>Map engine</h2>
         <p class="note">Outdoor, Satellite, and 3D terrain need a MapTiler API key.</p>
         <label class="field-label" for="apiKeyInput">MapTiler API key</label>
@@ -88,6 +85,6 @@
   </div>
 
   <script src="https://cdn.maptiler.com/maptiler-sdk-js/latest/maptiler-sdk.umd.min.js"></script>
-  <script src="app-v18.4.js"></script>
+  <script src="app-v18.6.js"></script>
 </body>
 </html>

@@ -1,4 +1,1057 @@
 {
   "type": "FeatureCollection",
-  "features": []
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "North Country Trail \u2013 Pictured Rocks corridor",
+        "trailCategory": "long_distance",
+        "manager": "NPS / North Country Trail Association",
+        "note": "Starter corridor for the North Country Trail through Pictured Rocks National Lakeshore."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -86.67,
+            46.553
+          ],
+          [
+            -86.648,
+            46.587
+          ],
+          [
+            -86.643,
+            46.628
+          ],
+          [
+            -86.632,
+            46.678
+          ],
+          [
+            -86.663,
+            46.732
+          ],
+          [
+            -86.682,
+            46.759
+          ],
+          [
+            -86.702,
+            46.798
+          ],
+          [
+            -86.738,
+            46.835
+          ],
+          [
+            -86.79,
+            46.838
+          ],
+          [
+            -86.853,
+            46.835
+          ],
+          [
+            -86.908,
+            46.813
+          ],
+          [
+            -86.98,
+            46.794
+          ],
+          [
+            -87.039,
+            46.817
+          ],
+          [
+            -87.089,
+            46.866
+          ],
+          [
+            -87.114,
+            46.919
+          ],
+          [
+            -87.12,
+            46.962
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "North Country Trail \u2013 Porcupine Mountains corridor",
+        "trailCategory": "long_distance",
+        "manager": "Michigan DNR / North Country Trail Association",
+        "note": "Starter corridor for the North Country Trail through Porcupine Mountains Wilderness State Park."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -89.676,
+            46.747
+          ],
+          [
+            -89.62,
+            46.748
+          ],
+          [
+            -89.557,
+            46.746
+          ],
+          [
+            -89.493,
+            46.733
+          ],
+          [
+            -89.424,
+            46.716
+          ],
+          [
+            -89.366,
+            46.715
+          ],
+          [
+            -89.312,
+            46.703
+          ],
+          [
+            -89.267,
+            46.71
+          ],
+          [
+            -89.214,
+            46.708
+          ],
+          [
+            -89.154,
+            46.7
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Iron Ore Heritage Trail",
+        "trailCategory": "long_distance",
+        "manager": "Iron Ore Heritage Recreation Authority",
+        "note": "Regional corridor from Republic through Negaunee, Ishpeming, and Marquette area."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -88.001,
+            46.484
+          ],
+          [
+            -87.928,
+            46.497
+          ],
+          [
+            -87.874,
+            46.513
+          ],
+          [
+            -87.824,
+            46.526
+          ],
+          [
+            -87.75,
+            46.541
+          ],
+          [
+            -87.644,
+            46.549
+          ],
+          [
+            -87.558,
+            46.548
+          ],
+          [
+            -87.479,
+            46.545
+          ],
+          [
+            -87.397,
+            46.544
+          ],
+          [
+            -87.309,
+            46.538
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Bill Nichols Trail",
+        "trailCategory": "long_distance",
+        "manager": "State / local partners",
+        "note": "Starter corridor from Houghton/Hancock to Calumet."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -88.575,
+            47.122
+          ],
+          [
+            -88.558,
+            47.169
+          ],
+          [
+            -88.544,
+            47.209
+          ],
+          [
+            -88.531,
+            47.248
+          ],
+          [
+            -88.504,
+            47.277
+          ],
+          [
+            -88.476,
+            47.315
+          ],
+          [
+            -88.454,
+            47.36
+          ],
+          [
+            -88.447,
+            47.406
+          ],
+          [
+            -88.452,
+            47.44
+          ],
+          [
+            -88.455,
+            47.468
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Fred Meijer White Pine Trail",
+        "trailCategory": "long_distance",
+        "manager": "Michigan DNR",
+        "note": "Starter corridor from Grand Rapids north to Cadillac/Comstock Park-Reed City portion."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -85.67,
+            42.963
+          ],
+          [
+            -85.557,
+            43.121
+          ],
+          [
+            -85.487,
+            43.189
+          ],
+          [
+            -85.432,
+            43.224
+          ],
+          [
+            -85.384,
+            43.29
+          ],
+          [
+            -85.356,
+            43.452
+          ],
+          [
+            -85.483,
+            43.691
+          ],
+          [
+            -85.486,
+            43.826
+          ],
+          [
+            -85.516,
+            43.9
+          ],
+          [
+            -85.482,
+            43.966
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kal-Haven Trail",
+        "trailCategory": "long_distance",
+        "manager": "Michigan DNR",
+        "note": "Starter corridor from Kalamazoo to South Haven."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -85.589,
+            42.291
+          ],
+          [
+            -85.511,
+            42.312
+          ],
+          [
+            -85.411,
+            42.324
+          ],
+          [
+            -85.325,
+            42.325
+          ],
+          [
+            -85.214,
+            42.329
+          ],
+          [
+            -85.111,
+            42.336
+          ],
+          [
+            -85.001,
+            42.335
+          ],
+          [
+            -84.92,
+            42.346
+          ],
+          [
+            -84.844,
+            42.354
+          ],
+          [
+            -84.649,
+            42.402
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "North Western State Trail",
+        "trailCategory": "long_distance",
+        "manager": "Michigan DNR",
+        "note": "Starter corridor from Petoskey to Mackinaw City."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -84.954,
+            45.374
+          ],
+          [
+            -84.906,
+            45.435
+          ],
+          [
+            -84.882,
+            45.487
+          ],
+          [
+            -84.801,
+            45.563
+          ],
+          [
+            -84.756,
+            45.614
+          ],
+          [
+            -84.708,
+            45.655
+          ],
+          [
+            -84.675,
+            45.723
+          ],
+          [
+            -84.72,
+            45.775
+          ],
+          [
+            -84.736,
+            45.776
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Betsie Valley Trail",
+        "trailCategory": "long_distance",
+        "manager": "Friends of Betsie Valley Trail / local partners",
+        "note": "Starter corridor from Elberta to Thompsonville."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -86.342,
+            44.616
+          ],
+          [
+            -86.29,
+            44.629
+          ],
+          [
+            -86.213,
+            44.638
+          ],
+          [
+            -86.14,
+            44.641
+          ],
+          [
+            -86.073,
+            44.635
+          ],
+          [
+            -86.003,
+            44.633
+          ],
+          [
+            -85.932,
+            44.635
+          ],
+          [
+            -85.849,
+            44.641
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Pere Marquette Rail Trail",
+        "trailCategory": "long_distance",
+        "manager": "State / local partners",
+        "note": "Starter corridor from Clare to Midland."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -84.768,
+            43.825
+          ],
+          [
+            -84.723,
+            43.838
+          ],
+          [
+            -84.651,
+            43.84
+          ],
+          [
+            -84.562,
+            43.843
+          ],
+          [
+            -84.486,
+            43.838
+          ],
+          [
+            -84.404,
+            43.835
+          ],
+          [
+            -84.3,
+            43.836
+          ],
+          [
+            -84.231,
+            43.83
+          ],
+          [
+            -84.143,
+            43.821
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Mike Levine Lakelands Trail State Park",
+        "trailCategory": "long_distance",
+        "manager": "Michigan DNR",
+        "note": "Starter corridor from Hamburg to Stockbridge area."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -83.807,
+            42.456
+          ],
+          [
+            -83.752,
+            42.451
+          ],
+          [
+            -83.687,
+            42.448
+          ],
+          [
+            -83.626,
+            42.452
+          ],
+          [
+            -83.559,
+            42.447
+          ],
+          [
+            -83.483,
+            42.444
+          ],
+          [
+            -83.389,
+            42.445
+          ],
+          [
+            -83.317,
+            42.43
+          ],
+          [
+            -83.224,
+            42.439
+          ],
+          [
+            -83.14,
+            42.443
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Polly Ann Trail",
+        "trailCategory": "long_distance",
+        "manager": "Polly Ann Trail Management Council",
+        "note": "Starter corridor from Orion Township through Oxford to Leonard."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -83.241,
+            42.785
+          ],
+          [
+            -83.206,
+            42.813
+          ],
+          [
+            -83.193,
+            42.86
+          ],
+          [
+            -83.183,
+            42.907
+          ],
+          [
+            -83.177,
+            42.955
+          ],
+          [
+            -83.177,
+            43.006
+          ],
+          [
+            -83.164,
+            43.054
+          ],
+          [
+            -83.158,
+            43.112
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Empire Bluff Trail",
+        "trailCategory": "federal",
+        "manager": "NPS",
+        "note": "Starter line based on the official trail corridor at Sleeping Bear Dunes National Lakeshore."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -86.064,
+            44.829
+          ],
+          [
+            -86.071,
+            44.832
+          ],
+          [
+            -86.08,
+            44.835
+          ],
+          [
+            -86.089,
+            44.838
+          ],
+          [
+            -86.098,
+            44.842
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Pyramid Point Trail",
+        "trailCategory": "federal",
+        "manager": "NPS",
+        "note": "Starter line based on the official trail corridor at Sleeping Bear Dunes National Lakeshore."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -85.963,
+            44.94
+          ],
+          [
+            -85.971,
+            44.942
+          ],
+          [
+            -85.98,
+            44.946
+          ],
+          [
+            -85.987,
+            44.952
+          ],
+          [
+            -85.991,
+            44.958
+          ],
+          [
+            -85.995,
+            44.964
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Alligator Hill Trail",
+        "trailCategory": "federal",
+        "manager": "NPS",
+        "note": "Starter line based on the official trail corridor at Sleeping Bear Dunes National Lakeshore."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -86.07,
+            44.876
+          ],
+          [
+            -86.079,
+            44.88
+          ],
+          [
+            -86.091,
+            44.883
+          ],
+          [
+            -86.103,
+            44.886
+          ],
+          [
+            -86.112,
+            44.884
+          ],
+          [
+            -86.12,
+            44.878
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Chapel Loop",
+        "trailCategory": "federal",
+        "manager": "NPS",
+        "note": "Starter loop based on Chapel Basin / Chapel Rock area."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -86.157,
+            46.641
+          ],
+          [
+            -86.156,
+            46.652
+          ],
+          [
+            -86.163,
+            46.662
+          ],
+          [
+            -86.171,
+            46.672
+          ],
+          [
+            -86.177,
+            46.683
+          ],
+          [
+            -86.171,
+            46.692
+          ],
+          [
+            -86.163,
+            46.697
+          ],
+          [
+            -86.154,
+            46.691
+          ],
+          [
+            -86.15,
+            46.68
+          ],
+          [
+            -86.151,
+            46.668
+          ],
+          [
+            -86.154,
+            46.655
+          ],
+          [
+            -86.157,
+            46.641
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Miners Falls Trail",
+        "trailCategory": "federal",
+        "manager": "NPS",
+        "note": "Starter line to Miners Falls at Pictured Rocks National Lakeshore."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -86.634,
+            46.575
+          ],
+          [
+            -86.632,
+            46.579
+          ],
+          [
+            -86.629,
+            46.583
+          ],
+          [
+            -86.627,
+            46.587
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Greenstone Ridge Trail",
+        "trailCategory": "federal",
+        "manager": "NPS",
+        "note": "Starter corridor across Isle Royale National Park."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -88.548,
+            48.148
+          ],
+          [
+            -88.47,
+            48.135
+          ],
+          [
+            -88.395,
+            48.119
+          ],
+          [
+            -88.309,
+            48.108
+          ],
+          [
+            -88.227,
+            48.101
+          ],
+          [
+            -88.143,
+            48.094
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Escarpment Trail",
+        "trailCategory": "state",
+        "manager": "Michigan DNR",
+        "note": "Starter corridor along the Porcupine Mountains escarpment."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -89.744,
+            46.776
+          ],
+          [
+            -89.704,
+            46.781
+          ],
+          [
+            -89.657,
+            46.78
+          ],
+          [
+            -89.61,
+            46.778
+          ],
+          [
+            -89.557,
+            46.773
+          ],
+          [
+            -89.514,
+            46.765
+          ],
+          [
+            -89.469,
+            46.756
+          ],
+          [
+            -89.43,
+            46.752
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Little Carp River Trail",
+        "trailCategory": "state",
+        "manager": "Michigan DNR",
+        "note": "Starter corridor in Porcupine Mountains Wilderness State Park."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -89.676,
+            46.749
+          ],
+          [
+            -89.653,
+            46.741
+          ],
+          [
+            -89.625,
+            46.732
+          ],
+          [
+            -89.598,
+            46.724
+          ],
+          [
+            -89.567,
+            46.716
+          ],
+          [
+            -89.533,
+            46.709
+          ],
+          [
+            -89.498,
+            46.704
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "River Trail \u2013 Tahquamenon Falls",
+        "trailCategory": "state",
+        "manager": "Michigan DNR",
+        "note": "Starter line between Upper and Lower Tahquamenon Falls areas."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -85.218,
+            46.575
+          ],
+          [
+            -85.225,
+            46.58
+          ],
+          [
+            -85.232,
+            46.584
+          ],
+          [
+            -85.241,
+            46.588
+          ],
+          [
+            -85.251,
+            46.59
+          ],
+          [
+            -85.264,
+            46.592
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Clark Lake Loop",
+        "trailCategory": "state",
+        "manager": "Michigan DNR",
+        "note": "Starter loop at Muskallonge Lake State Park."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -86.006,
+            45.727
+          ],
+          [
+            -86.002,
+            45.733
+          ],
+          [
+            -85.998,
+            45.739
+          ],
+          [
+            -85.992,
+            45.743
+          ],
+          [
+            -85.985,
+            45.745
+          ],
+          [
+            -85.979,
+            45.742
+          ],
+          [
+            -85.977,
+            45.736
+          ],
+          [
+            -85.981,
+            45.73
+          ],
+          [
+            -85.989,
+            45.726
+          ],
+          [
+            -85.997,
+            45.724
+          ],
+          [
+            -86.006,
+            45.727
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Big Spring Pathway",
+        "trailCategory": "state",
+        "manager": "Michigan DNR",
+        "note": "Starter line at Indian Lake / Big Spring area."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -88.407,
+            46.225
+          ],
+          [
+            -88.398,
+            46.227
+          ],
+          [
+            -88.389,
+            46.229
+          ],
+          [
+            -88.38,
+            46.231
+          ],
+          [
+            -88.372,
+            46.234
+          ]
+        ]
+      }
+    }
+  ]
 }

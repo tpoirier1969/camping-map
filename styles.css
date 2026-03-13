@@ -20,23 +20,6 @@ html, body, #appShell, #map {
 body { overflow: hidden; }
 #map { position: fixed; inset: 0; z-index: 1; }
 
-#zoomReadout {
-  position: fixed;
-  right: 12px;
-  bottom: max(12px, calc(env(safe-area-inset-bottom) + 10px));
-  z-index: 99997;
-  background: rgba(14, 26, 22, 0.88);
-  color: var(--text);
-  border: 1px solid rgba(255,255,255,0.18);
-  border-radius: 12px;
-  padding: 8px 10px;
-  font-size: 0.9rem;
-  line-height: 1.1;
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(8px);
-  pointer-events: none;
-}
-
 #menuToggle {
   position: fixed !important;
   top: max(16px, calc(env(safe-area-inset-top) + 12px)) !important;
@@ -178,16 +161,4 @@ body { overflow: hidden; }
 @media (max-width: 640px) {
   .key-row { grid-template-columns: 1fr; }
   .counts-grid { grid-template-columns: 1fr 1fr; }
-}
-
-
-.manage-key-button {
-  width: 100%;
-  margin-top: 14px;
-  margin-bottom: 2px;
-  text-align: left;
-}
-
-#keySection[hidden] {
-  display: none !important;
 }
