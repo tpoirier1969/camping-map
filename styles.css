@@ -179,3 +179,15 @@ body { overflow: hidden; }
   .key-row { grid-template-columns: 1fr; }
   .counts-grid { grid-template-columns: 1fr 1fr; }
 }
+
+
+.manage-key-button {
+  width: 100%;
+  margin-top: 14px;
+  margin-bottom: 2px;
+  text-align: left;
+}
+
+#keySection[hidden] {
+  display: none !important;
+}

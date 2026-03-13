@@ -27,7 +27,9 @@
         <button id="closeMenu" class="ghost-button" aria-label="Close menu">✕</button>
       </div>
 
-      <section class="panel-section key-section">
+      <button id="revealKeySectionBtn" class="ghost-button manage-key-button" type="button" hidden>Map key saved — manage</button>
+
+      <section class="panel-section key-section" id="keySection">
         <h2>Map engine</h2>
         <p class="note">Outdoor, Satellite, and 3D terrain need a MapTiler API key.</p>
         <label class="field-label" for="apiKeyInput">MapTiler API key</label>
@@ -86,6 +88,6 @@
   </div>
 
   <script src="https://cdn.maptiler.com/maptiler-sdk-js/latest/maptiler-sdk.umd.min.js"></script>
-  <script src="app.js"></script>
+  <script src="app-v18.4.js"></script>
 </body>
 </html>
