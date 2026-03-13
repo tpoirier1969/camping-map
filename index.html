@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#133b2c">
   <title>Camping Map</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="https://cdn.maptiler.com/maptiler-sdk-js/latest/maptiler-sdk.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -20,11 +20,34 @@
     <aside id="menuPanel" class="is-open">
       <div class="panel-header">
         <div>
-          <h1>Camping Map <span id="versionTag">v17.0</span></h1>
+          <h1>Camping Map <span id="versionTag">v18.0</span></h1>
           <p id="statusText">Loading map data…</p>
         </div>
         <button id="closeMenu" class="ghost-button" aria-label="Close menu">✕</button>
       </div>
+
+      <section class="panel-section key-section">
+        <h2>Map engine</h2>
+        <p class="note">Outdoor, Satellite, and 3D terrain need a MapTiler API key.</p>
+        <label class="field-label" for="apiKeyInput">MapTiler API key</label>
+        <div class="key-row">
+          <input id="apiKeyInput" type="password" placeholder="Paste key here">
+          <button id="saveKeyBtn" class="ghost-button" type="button">Save</button>
+          <button id="clearKeyBtn" class="ghost-button" type="button">Clear</button>
+        </div>
+      </section>
+
+      <section class="panel-section">
+        <h2>Basemap</h2>
+        <label class="field-label" for="basemapSelect">Map style</label>
+        <select id="basemapSelect">
+          <option value="outdoor">Outdoor</option>
+          <option value="satellite">Satellite</option>
+          <option value="osm">OpenStreetMap fallback</option>
+        </select>
+        <label class="switch-row"><input type="checkbox" id="toggleTerrain"> 3D terrain</label>
+        <label class="switch-row"><input type="checkbox" id="togglePitch"> Tilt camera when 3D is on</label>
+      </section>
 
       <section class="panel-section">
         <h2>Display behavior</h2>
@@ -40,12 +63,13 @@
       <section class="panel-section" id="trailSection" hidden>
         <h2>Trails</h2>
         <label class="switch-row"><input type="checkbox" id="toggleTrails" checked> Show labeled trail overlays</label>
-        <p id="trailStatusText">Trails loaded.</p>
+        <p id="trailStatusText">No trail overlay loaded.</p>
       </section>
 
       <section class="panel-section">
-        <h2>How zoom works now</h2>
-        <p>Zoomed out, you get one summary circle per state. When you zoom in enough, or a state mostly fills the screen, the enabled campsite layers break back out into individual points.</p>
+        <h2>Add a site</h2>
+        <label class="switch-row"><input type="checkbox" id="toggleAddMode"> Tap map to drop a draft pin</label>
+        <p class="note">Phone-friendly add mode: enable this and tap once, or long-press the map.</p>
       </section>
 
       <section class="panel-section">
@@ -60,7 +84,7 @@
     </aside>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://cdn.maptiler.com/maptiler-sdk-js/latest/maptiler-sdk.umd.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

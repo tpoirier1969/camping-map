@@ -1,37 +1,29 @@
-const VERSION = 'v17.2';
-const DEFAULT_CENTER = [46.6, -87.4];
+const VERSION = 'v18.0';
+const DEFAULT_CENTER = [-87.4, 46.6];
 const DEFAULT_ZOOM = 6;
 const DETAIL_ZOOM = 7;
 const STATE_PADDING_FACTOR = 0.18;
 const LONG_PRESS_MS = 700;
-const BUILTIN_BUCKETS = {
-  modern: { label: 'Modern', color: '#2a7fff', radius: 8 },
-  rustic: { label: 'Rustic', color: '#a46a24', radius: 8 },
-  boondocking: { label: 'Boondocking / dispersed', color: '#3f8c53', radius: 8 },
-  private: { label: 'Private campgrounds', color: '#cf4f7d', radius: 8 },
-  national_forest: { label: 'National forest campgrounds', color: '#1f8a70', radius: 8 },
-  state_federal_modern: { label: 'State / federal modern campgrounds', color: '#2a7fff', radius: 8 },
-  state_federal_rustic: { label: 'State / federal rustic campgrounds', color: '#a46a24', radius: 8 },
-  trailhead: { label: 'Trailheads', color: '#8e5bd6', radius: 8 },
-  other: { label: 'Other campsites', color: '#949494', radius: 8 },
-  state_summary: { label: 'State summary', color: '#7f4dff', radius: 14 },
-  trail: { label: 'Trail', color: '#ff7a00', radius: 0 }
+const STORAGE_KEYS = {
+  apiKey: 'campingMap.maptilerApiKey',
+  basemap: 'campingMap.basemap',
+  terrain: 'campingMap.terrain',
+  tilt: 'campingMap.pitch'
 };
-
-const map = L.map('map', {
-  zoomControl: true,
-  preferCanvas: true
-}).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '&copy; OpenStreetMap contributors'
-}).addTo(map);
-
-const siteLayer = L.layerGroup().addTo(map);
-const stateLayer = L.layerGroup().addTo(map);
-const trailLayer = L.layerGroup();
-const draftLayer = L.layerGroup().addTo(map);
+const BUILTIN_BUCKETS = {
+  modern: { label: 'Modern', color: '#2a7fff', radius: 9 },
+  rustic: { label: 'Rustic', color: '#a46a24', radius: 9 },
+  boondocking: { label: 'Boondocking / dispersed', color: '#3f8c53', radius: 9 },
+  private: { label: 'Private campgrounds', color: '#cf4f7d', radius: 9 },
+  national_forest: { label: 'National forest campgrounds', color: '#1f8a70', radius: 9 },
+  state_federal_modern: { label: 'State / federal modern campgrounds', color: '#2a7fff', radius: 9 },
+  state_federal_rustic: { label: 'State / federal rustic campgrounds', color: '#a46a24', radius: 9 },
+  trailhead: { label: 'Trailheads', color: '#8e5bd6', radius: 9 },
+  other: { label: 'Other campsites', color: '#949494', radius: 9 },
+  state_summary: { label: 'State summary', color: '#7f4dff', radius: 18 },
+  trail: { label: 'Trail', color: '#ff7a00', radius: 0 },
+  draft: { label: 'Draft site', color: '#ffd23f', radius: 11 }
+};
 
 const els = {
   menuToggle: document.getElementById('menuToggle'),
@@ -46,33 +38,72 @@ const els = {
   trailStatusText: document.getElementById('trailStatusText'),
   layerToggleList: document.getElementById('layerToggleList'),
   legendList: document.getElementById('legendList'),
-  versionTag: document.getElementById('versionTag')
+  versionTag: document.getElementById('versionTag'),
+  apiKeyInput: document.getElementById('apiKeyInput'),
+  saveKeyBtn: document.getElementById('saveKeyBtn'),
+  clearKeyBtn: document.getElementById('clearKeyBtn'),
+  basemapSelect: document.getElementById('basemapSelect'),
+  toggleTerrain: document.getElementById('toggleTerrain'),
+  togglePitch: document.getElementById('togglePitch'),
+  toggleAddMode: document.getElementById('toggleAddMode')
 };
-
 els.versionTag.textContent = VERSION;
 
-els.menuToggle.addEventListener('click', () => {
-  els.menuPanel.classList.toggle('is-collapsed');
-});
-
-els.closeMenu.addEventListener('click', () => {
-  els.menuPanel.classList.add('is-collapsed');
-});
-
 const model = {
+  map: null,
   sites: [],
   trails: null,
   stateGroups: new Map(),
   stateBBoxes: new Map(),
   layerDefs: new Map(),
   layerState: new Map(),
+  stateSummaryByState: new Map(),
   addMode: false,
-  draftMarker: null,
+  hasApiKey: false,
+  styleReady: false,
+  mapStyleMode: localStorage.getItem(STORAGE_KEYS.basemap) || 'outdoor',
+  terrainEnabled: localStorage.getItem(STORAGE_KEYS.terrain) === 'true',
+  tiltEnabled: localStorage.getItem(STORAGE_KEYS.tilt) === 'true',
+  draftFeature: null,
   longPressTimer: null,
-  touchStartLatLng: null,
-  touchMoved: false,
-  startStatusText: 'Loading map data…'
+  pressStartPoint: null,
+  pressMoved: false
 };
+
+function getSavedApiKey() {
+  return (localStorage.getItem(STORAGE_KEYS.apiKey) || '').trim();
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replaceAll('`', '&#96;');
+}
+
+function cleanLabel(value) {
+  return String(value || '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function titleCase(value) {
+  return cleanLabel(value).replace(/\b\w/g, (m) => m.toUpperCase());
+}
+function makeSlug(value) {
+  return cleanLabel(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+function hashColor(text) {
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(i);
+    hash |= 0;
+  }
+  return `hsl(${Math.abs(hash) % 360} 60% 52%)`;
+}
 
 function normalizeCategory(rawCategory = '') {
   const value = String(rawCategory).trim().toLowerCase();
@@ -83,101 +114,6 @@ function normalizeCategory(rawCategory = '') {
   if (value.includes('trailhead')) return 'trailhead';
   if (value.includes('private')) return 'private';
   return value;
-}
-
-function getLatLng(raw) {
-  if (Array.isArray(raw?.coordinates) && raw.coordinates.length >= 2) {
-    const [lng, lat] = raw.coordinates;
-    if (Number.isFinite(lat) && Number.isFinite(lng)) return [Number(lat), Number(lng)];
-  }
-
-  if (Array.isArray(raw?.geometry?.coordinates) && raw.geometry.coordinates.length >= 2) {
-    const [lng, lat] = raw.geometry.coordinates;
-    if (Number.isFinite(lat) && Number.isFinite(lng)) return [Number(lat), Number(lng)];
-  }
-
-  const lat = Number(raw.lat ?? raw.latitude ?? raw.y);
-  const lng = Number(raw.lng ?? raw.lon ?? raw.longitude ?? raw.x);
-  if (Number.isFinite(lat) && Number.isFinite(lng)) return [lat, lng];
-  return null;
-}
-
-function cleanLabel(value) {
-  return String(value || '')
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function titleCase(value) {
-  return cleanLabel(value).replace(/\b\w/g, (match) => match.toUpperCase());
-}
-
-function makeSlug(value) {
-  return cleanLabel(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-}
-
-function hashColor(text) {
-  let hash = 0;
-  for (let i = 0; i < text.length; i += 1) {
-    hash = ((hash << 5) - hash) + text.charCodeAt(i);
-    hash |= 0;
-  }
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue} 60% 52%)`;
-}
-
-function deriveLayerInfo(raw, category) {
-  const layerish = raw.layerLabel || raw.layer_name || raw.layerName || raw.layer || raw.mapLayer || raw.group || raw.collection || '';
-  const ownerText = cleanLabel(raw.owner || raw.ownership || raw.manager || raw.agency || raw.system || raw.landManager || '').toLowerCase();
-  const typeText = cleanLabel(raw.type || raw.kind || raw.category || raw.classification || '').toLowerCase();
-  const combined = `${layerish} ${ownerText} ${typeText}`.trim();
-
-  if (layerish) {
-    return {
-      key: makeSlug(layerish) || `layer-${category}`,
-      label: titleCase(layerish),
-      bucket: categoryFromText(combined, category)
-    };
-  }
-
-  if (ownerText.includes('private')) {
-    return { key: 'private-campgrounds', label: 'Private Campgrounds', bucket: 'private' };
-  }
-
-  if ((ownerText.includes('state') || ownerText.includes('federal') || ownerText.includes('national')) && category === 'modern') {
-    return { key: 'state-federal-modern-campgrounds', label: 'State / Federal Campgrounds - Modern', bucket: 'state_federal_modern' };
-  }
-
-  if ((ownerText.includes('state') || ownerText.includes('federal') || ownerText.includes('national')) && category === 'rustic') {
-    return { key: 'state-federal-rustic-campgrounds', label: 'State / Federal Campgrounds - Rustic', bucket: 'state_federal_rustic' };
-  }
-
-  if (combined.includes('national forest')) {
-    return { key: 'national-forest-campgrounds', label: 'National Forest Campgrounds', bucket: 'national_forest' };
-  }
-
-  if (category === 'boondocking') {
-    return { key: 'boondocking', label: 'Boondocking', bucket: 'boondocking' };
-  }
-  if (category === 'modern') {
-    return { key: 'modern-campgrounds', label: 'Modern Campgrounds', bucket: 'modern' };
-  }
-  if (category === 'rustic') {
-    return { key: 'rustic-campgrounds', label: 'Rustic Campgrounds', bucket: 'rustic' };
-  }
-  if (category === 'private') {
-    return { key: 'private-campgrounds', label: 'Private Campgrounds', bucket: 'private' };
-  }
-  if (category === 'trailhead') {
-    return { key: 'trailheads', label: 'Trailheads', bucket: 'trailhead' };
-  }
-
-  return {
-    key: category ? `${makeSlug(category)}-sites` : 'other-sites',
-    label: category ? `${titleCase(category)} Sites` : 'Other Campsites',
-    bucket: categoryFromText(combined, category)
-  };
 }
 
 function categoryFromText(text, fallback = 'other') {
@@ -195,16 +131,53 @@ function categoryFromText(text, fallback = 'other') {
   return BUILTIN_BUCKETS[fallback] ? fallback : 'other';
 }
 
-function normalizeSite(raw, idx) {
-  const latlng = getLatLng(raw);
-  if (!latlng) return null;
+function deriveLayerInfo(raw, category) {
+  const layerish = raw.layerLabel || raw.layer_name || raw.layerName || raw.layer || raw.mapLayer || raw.group || raw.collection || '';
+  const ownerText = cleanLabel(raw.owner || raw.ownership || raw.manager || raw.agency || raw.system || raw.landManager || '').toLowerCase();
+  const typeText = cleanLabel(raw.type || raw.kind || raw.category || raw.classification || '').toLowerCase();
+  const combined = `${layerish} ${ownerText} ${typeText}`.trim();
 
+  if (layerish) {
+    return { key: makeSlug(layerish) || `layer-${category}`, label: titleCase(layerish), bucket: categoryFromText(combined, category) };
+  }
+  if (ownerText.includes('private')) return { key: 'private-campgrounds', label: 'Private Campgrounds', bucket: 'private' };
+  if ((ownerText.includes('state') || ownerText.includes('federal') || ownerText.includes('national')) && category === 'modern') {
+    return { key: 'state-federal-modern-campgrounds', label: 'State / Federal Campgrounds - Modern', bucket: 'state_federal_modern' };
+  }
+  if ((ownerText.includes('state') || ownerText.includes('federal') || ownerText.includes('national')) && category === 'rustic') {
+    return { key: 'state-federal-rustic-campgrounds', label: 'State / Federal Campgrounds - Rustic', bucket: 'state_federal_rustic' };
+  }
+  if (combined.includes('national forest')) return { key: 'national-forest-campgrounds', label: 'National Forest Campgrounds', bucket: 'national_forest' };
+  if (category === 'boondocking') return { key: 'boondocking', label: 'Boondocking', bucket: 'boondocking' };
+  if (category === 'modern') return { key: 'modern-campgrounds', label: 'Modern Campgrounds', bucket: 'modern' };
+  if (category === 'rustic') return { key: 'rustic-campgrounds', label: 'Rustic Campgrounds', bucket: 'rustic' };
+  if (category === 'private') return { key: 'private-campgrounds', label: 'Private Campgrounds', bucket: 'private' };
+  if (category === 'trailhead') return { key: 'trailheads', label: 'Trailheads', bucket: 'trailhead' };
+  return { key: category ? `${makeSlug(category)}-sites` : 'other-sites', label: category ? `${titleCase(category)} Sites` : 'Other Campsites', bucket: categoryFromText(combined, category) };
+}
+
+function getLatLng(raw) {
+  if (Array.isArray(raw?.coordinates) && raw.coordinates.length >= 2) {
+    const [lng, lat] = raw.coordinates;
+    if (Number.isFinite(lat) && Number.isFinite(lng)) return [lng, lat];
+  }
+  if (Array.isArray(raw?.geometry?.coordinates) && raw.geometry.coordinates.length >= 2) {
+    const [lng, lat] = raw.geometry.coordinates;
+    if (Number.isFinite(lat) && Number.isFinite(lng)) return [lng, lat];
+  }
+  const lat = Number(raw.lat ?? raw.latitude ?? raw.y);
+  const lng = Number(raw.lng ?? raw.lon ?? raw.longitude ?? raw.x);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) return [lng, lat];
+  return null;
+}
+
+function normalizeSite(raw, idx) {
+  const lngLat = getLatLng(raw);
+  if (!lngLat) return null;
   const state = raw.state || raw.stateAbbr || raw.state_abbr || raw.region || raw.province || raw.admin1 || 'Unknown';
   const category = normalizeCategory(raw.category || raw.type || raw.kind || raw.layer || raw.classification);
   const layerInfo = deriveLayerInfo(raw, category);
   const website = raw.website || raw.url || raw.link || raw.official_url || '';
-  const navigateUrl = `https://www.google.com/maps?q=${latlng[0]},${latlng[1]}`;
-
   return {
     id: raw.id || `site-${idx}`,
     name: raw.name || raw.title || raw.site || raw.label || `Untitled site ${idx + 1}`,
@@ -215,12 +188,31 @@ function normalizeSite(raw, idx) {
     bucket: layerInfo.bucket,
     description: raw.description || raw.notes || raw.summary || '',
     website,
-    navigateUrl,
+    navigateUrl: `https://www.google.com/maps?q=${lngLat[1]},${lngLat[0]}`,
     access: raw.access || raw.road_access || '',
     cost: raw.cost || raw.price || '',
     showers: raw.showers || '',
     raw,
-    latlng
+    lngLat,
+    feature: {
+      type: 'Feature',
+      properties: {
+        id: raw.id || `site-${idx}`,
+        name: raw.name || raw.title || raw.site || raw.label || `Untitled site ${idx + 1}`,
+        state: String(state).trim() || 'Unknown',
+        category,
+        layerKey: layerInfo.key,
+        layerLabel: layerInfo.label,
+        bucket: layerInfo.bucket,
+        description: raw.description || raw.notes || raw.summary || '',
+        website,
+        navigateUrl: `https://www.google.com/maps?q=${lngLat[1]},${lngLat[0]}`,
+        access: raw.access || raw.road_access || '',
+        cost: raw.cost || raw.price || '',
+        showers: raw.showers || ''
+      },
+      geometry: { type: 'Point', coordinates: lngLat }
+    }
   };
 }
 
@@ -230,8 +222,8 @@ async function loadFirstAvailable(urls) {
       const response = await fetch(url, { cache: 'no-store' });
       if (!response.ok) continue;
       return await response.json();
-    } catch (err) {
-      // Keep trying.
+    } catch {
+      // keep trying
     }
   }
   return null;
@@ -243,61 +235,38 @@ function normalizeSiteArray(sitesRaw) {
     : Array.isArray(sitesRaw?.sites)
       ? sitesRaw.sites
       : Array.isArray(sitesRaw?.features)
-        ? sitesRaw.features.map((feature) => ({
-            ...(feature.properties || {}),
-            geometry: feature.geometry,
-            coordinates: feature.geometry?.coordinates
-          }))
+        ? sitesRaw.features.map((feature) => ({ ...(feature.properties || {}), geometry: feature.geometry, coordinates: feature.geometry?.coordinates }))
         : [];
 }
 
 async function loadData() {
-  const sitesRaw = await loadFirstAvailable([
-    'data/sites.json',
-    'data/site-data.json',
-    'data/campgrounds.json',
-    'sites.json'
-  ]);
-
+  const sitesRaw = await loadFirstAvailable(['data/sites.json', 'data/site-data.json', 'data/campgrounds.json', 'sites.json']);
+  const trailRaw = await loadFirstAvailable(['data/trails.geojson', 'trails.geojson']);
   model.sites = normalizeSiteArray(sitesRaw).map(normalizeSite).filter(Boolean);
-  model.trails = null;
-
+  model.trails = trailRaw?.features?.length ? trailRaw : null;
   buildLayerDefinitions();
   buildStateGroups();
   renderLayerControls();
   renderLegend();
   syncTrailUi();
-  ensureAddSiteUi();
-  drawEverything();
-
-  const siteMsg = model.sites.length
-    ? `Loaded ${model.sites.length} campsites across ${model.layerDefs.size} visible layer${model.layerDefs.size === 1 ? '' : 's'}.`
-    : 'No campsite file was found. Keep your existing sites.json in place.';
-
-  model.startStatusText = `${siteMsg} Trail layer removed.`;
-  setStatus(model.startStatusText);
 }
 
 function buildLayerDefinitions() {
   model.layerDefs.clear();
   model.layerState.clear();
-
   for (const site of model.sites) {
     if (!model.layerDefs.has(site.layerKey)) {
       const bucketStyle = BUILTIN_BUCKETS[site.bucket] || BUILTIN_BUCKETS.other;
-      const color = bucketStyle.color || hashColor(site.layerKey);
       model.layerDefs.set(site.layerKey, {
         key: site.layerKey,
         label: site.layerLabel,
         bucket: site.bucket,
-        color,
-        radius: bucketStyle.radius || 8,
-        checked: true
+        color: bucketStyle.color || hashColor(site.layerKey),
+        radius: bucketStyle.radius || 8
       });
       model.layerState.set(site.layerKey, true);
     }
   }
-
   const sorted = [...model.layerDefs.values()].sort((a, b) => a.label.localeCompare(b.label));
   model.layerDefs = new Map(sorted.map((def) => [def.key, def]));
 }
@@ -305,22 +274,22 @@ function buildLayerDefinitions() {
 function buildStateGroups() {
   model.stateGroups.clear();
   model.stateBBoxes.clear();
-
+  model.stateSummaryByState.clear();
   for (const site of model.sites) {
-    if (!model.stateGroups.has(site.state)) {
-      model.stateGroups.set(site.state, []);
-    }
+    if (!model.stateGroups.has(site.state)) model.stateGroups.set(site.state, []);
     model.stateGroups.get(site.state).push(site);
   }
-
   for (const [state, sites] of model.stateGroups.entries()) {
-    const latitudes = sites.map((s) => s.latlng[0]);
-    const longitudes = sites.map((s) => s.latlng[1]);
-    const bounds = L.latLngBounds(
-      [Math.min(...latitudes), Math.min(...longitudes)],
-      [Math.max(...latitudes), Math.max(...longitudes)]
-    );
-    model.stateBBoxes.set(state, bounds);
+    const lngs = sites.map((s) => s.lngLat[0]);
+    const lats = sites.map((s) => s.lngLat[1]);
+    const minLng = Math.min(...lngs), maxLng = Math.max(...lngs), minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    model.stateBBoxes.set(state, [[minLng, minLat], [maxLng, maxLat]]);
+    const centroid = [lngs.reduce((a,b)=>a+b,0)/lngs.length, lats.reduce((a,b)=>a+b,0)/lats.length];
+    model.stateSummaryByState.set(state, {
+      type: 'Feature',
+      properties: { state, count: sites.length },
+      geometry: { type: 'Point', coordinates: centroid }
+    });
   }
 }
 
@@ -329,525 +298,502 @@ function renderLayerControls() {
     els.layerToggleList.innerHTML = '<p>No campsite layers were detected yet.</p>';
     return;
   }
-
   els.layerToggleList.innerHTML = '';
   for (const def of model.layerDefs.values()) {
     const row = document.createElement('label');
     row.className = 'switch-row';
-    row.innerHTML = `
-      <input type="checkbox" data-layer-key="${escapeAttribute(def.key)}" ${model.layerState.get(def.key) ? 'checked' : ''}>
+    row.innerHTML = `<input type="checkbox" data-layer-key="${escapeAttribute(def.key)}" checked>
       <span class="legend-dot" style="background:${escapeAttribute(def.color)}"></span>
-      <span>${escapeHtml(def.label)}</span>
-    `;
+      <span>${escapeHtml(def.label)}</span>`;
     els.layerToggleList.appendChild(row);
   }
-
   els.layerToggleList.querySelectorAll('input[data-layer-key]').forEach((input) => {
     input.addEventListener('change', () => {
       model.layerState.set(input.dataset.layerKey, input.checked);
-      drawEverything();
+      updateOverlays();
     });
   });
 }
 
 function renderLegend() {
-  const items = [];
-  items.push({ type: 'dot', label: 'State summary', color: BUILTIN_BUCKETS.state_summary.color });
-  for (const def of model.layerDefs.values()) {
-    items.push({ type: 'dot', label: def.label, color: def.color });
-  }
-
-  els.legendList.innerHTML = items.map((item) => `
-    <div class="legend-item">
-      ${item.type === 'line'
-        ? `<span class="legend-line" style="border-top-color:${escapeAttribute(item.color)}"></span>`
-        : `<span class="legend-dot" style="background:${escapeAttribute(item.color)}"></span>`}
-      <span>${escapeHtml(item.label)}</span>
-    </div>
-  `).join('');
+  const items = [{ type: 'dot', label: 'State summary', color: BUILTIN_BUCKETS.state_summary.color }];
+  for (const def of model.layerDefs.values()) items.push({ type: 'dot', label: def.label, color: def.color });
+  if (model.trails?.features?.length) items.push({ type: 'line', label: 'Trail overlay', color: BUILTIN_BUCKETS.trail.color });
+  items.push({ type: 'dot', label: 'Draft site', color: BUILTIN_BUCKETS.draft.color });
+  els.legendList.innerHTML = items.map((item) => `<div class="legend-item">${item.type === 'line' ? `<span class="legend-line" style="border-top-color:${escapeAttribute(item.color)}"></span>` : `<span class="legend-dot" style="background:${escapeAttribute(item.color)}"></span>`}<span>${escapeHtml(item.label)}</span></div>`).join('');
 }
 
 function syncTrailUi() {
-  els.trailSection.hidden = true;
-  if (trailLayer && map.hasLayer(trailLayer)) map.removeLayer(trailLayer);
-}
-
-function ensureAddSiteUi() {
-  if (document.getElementById('addSiteActions')) return;
-
-  const displaySection = els.toggleStateSummaries.closest('.panel-section');
-  if (!displaySection) return;
-
-  const wrapper = document.createElement('div');
-  wrapper.className = 'panel-section';
-  wrapper.id = 'addSiteActions';
-  wrapper.innerHTML = `
-    <h2>Add a site</h2>
-    <p id="addSiteHint">Phone-friendly: tap <strong>Start add mode</strong>, then tap the map where the site belongs. You can also long-press the map.</p>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-      <button type="button" id="startAddSiteBtn" class="ghost-button">Start add mode</button>
-      <button type="button" id="cancelAddSiteBtn" class="ghost-button" hidden>Cancel add mode</button>
-      <button type="button" id="clearDraftSiteBtn" class="ghost-button" hidden>Clear draft pin</button>
-    </div>
-  `;
-  displaySection.insertAdjacentElement('afterend', wrapper);
-
-  wrapper.querySelector('#startAddSiteBtn').addEventListener('click', startAddMode);
-  wrapper.querySelector('#cancelAddSiteBtn').addEventListener('click', cancelAddMode);
-  wrapper.querySelector('#clearDraftSiteBtn').addEventListener('click', clearDraftMarker);
-}
-
-function setStatus(message) {
-  els.statusText.textContent = message;
-}
-
-function refreshAddUi() {
-  const startBtn = document.getElementById('startAddSiteBtn');
-  const cancelBtn = document.getElementById('cancelAddSiteBtn');
-  const clearBtn = document.getElementById('clearDraftSiteBtn');
-  const hint = document.getElementById('addSiteHint');
-
-  if (!startBtn || !cancelBtn || !clearBtn || !hint) return;
-
-  startBtn.hidden = model.addMode;
-  cancelBtn.hidden = !model.addMode;
-  clearBtn.hidden = !model.draftMarker;
-
-  if (model.addMode) {
-    hint.innerHTML = 'Add mode is armed. Tap the map once to drop the new site.';
-  } else if (model.draftMarker) {
-    hint.innerHTML = 'Draft pin placed. Open the pin popup to copy the JSON snippet.';
-  } else {
-    hint.innerHTML = 'Phone-friendly: tap <strong>Start add mode</strong>, then tap the map where the site belongs. You can also long-press the map.';
-  }
-}
-
-function startAddMode() {
-  model.addMode = true;
-  setStatus('Add mode ready. Tap the map where the new site belongs.');
-  refreshAddUi();
-}
-
-function cancelAddMode() {
-  model.addMode = false;
-  setStatus(model.startStatusText);
-  refreshAddUi();
-}
-
-function clearDraftMarker() {
-  draftLayer.clearLayers();
-  model.draftMarker = null;
-  setStatus(model.addMode ? 'Add mode ready. Tap the map where the new site belongs.' : model.startStatusText);
-  refreshAddUi();
-}
-
-function getLikelyLayerKey() {
-  const enabled = [...model.layerDefs.values()].filter((def) => isLayerEnabled(def.key));
-  return enabled[0]?.key || [...model.layerDefs.keys()][0] || 'boondocking';
-}
-
-function buildDraftPayload(latlng, overrides = {}) {
-  const chosenLayerKey = overrides.layerKey || getLikelyLayerKey();
-  const chosenDef = model.layerDefs.get(chosenLayerKey);
-  return {
-    name: overrides.name || 'New site',
-    state: overrides.state || '',
-    category: overrides.category || chosenDef?.bucket || 'other',
-    layer: chosenDef?.label || overrides.layer || '',
-    lat: Number(latlng.lat.toFixed(6)),
-    lng: Number(latlng.lng.toFixed(6)),
-    access: overrides.access || '',
-    cost: overrides.cost || '',
-    showers: overrides.showers || '',
-    website: overrides.website || '',
-    description: overrides.description || ''
-  };
-}
-
-function popupHtmlForDraft(payload) {
-  const pretty = JSON.stringify(payload, null, 2);
-  const layerOptions = [...model.layerDefs.values()].map((def) => (
-    `<option value="${escapeAttribute(def.key)}" ${def.label === payload.layer || def.key === payload.layer ? 'selected' : ''}>${escapeHtml(def.label)}</option>`
-  )).join('');
-
-  return `
-    <div class="popup-content">
-      <div class="popup-title">New site draft</div>
-      <div class="popup-meta">Tap fields, then copy the snippet into your data file.</div>
-      <div class="draft-form" style="display:grid; gap:8px;">
-        <label><div>Name</div><input data-draft-field="name" value="${escapeAttribute(payload.name)}" style="width:100%"></label>
-        <label><div>State</div><input data-draft-field="state" value="${escapeAttribute(payload.state)}" style="width:100%"></label>
-        <label><div>Layer</div><select data-draft-field="layerKey" style="width:100%">${layerOptions}</select></label>
-        <label><div>Category</div><input data-draft-field="category" value="${escapeAttribute(payload.category)}" style="width:100%"></label>
-        <label><div>Access</div><input data-draft-field="access" value="${escapeAttribute(payload.access)}" style="width:100%"></label>
-        <label><div>Cost</div><input data-draft-field="cost" value="${escapeAttribute(payload.cost)}" style="width:100%"></label>
-        <label><div>Website</div><input data-draft-field="website" value="${escapeAttribute(payload.website)}" style="width:100%"></label>
-        <label><div>Description</div><textarea data-draft-field="description" rows="3" style="width:100%">${escapeHtml(payload.description)}</textarea></label>
-      </div>
-      <div class="popup-meta">${payload.lat}, ${payload.lng}</div>
-      <div class="popup-actions" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-        <button type="button" data-copy-draft>Copy JSON</button>
-        <button type="button" data-clear-draft>Remove pin</button>
-      </div>
-      <pre data-draft-preview style="white-space:pre-wrap; max-height:220px; overflow:auto; margin-top:10px;">${escapeHtml(pretty)}</pre>
-    </div>
-  `;
-}
-
-function placeDraftMarker(latlng) {
-  clearDraftMarker();
-  const payload = buildDraftPayload(latlng);
-
-  const marker = L.circleMarker(latlng, {
-    radius: 11,
-    color: '#ffd54a',
-    fillColor: '#ffd54a',
-    fillOpacity: 0.9,
-    weight: 3
-  }).addTo(draftLayer);
-
-  marker.draftPayload = payload;
-  marker.bindPopup(popupHtmlForDraft(payload), { maxWidth: 320 }).openPopup();
-  model.draftMarker = marker;
-  model.addMode = false;
-  setStatus(`Draft pin placed at ${payload.lat}, ${payload.lng}. Open the pin popup to copy the JSON snippet.`);
-  refreshAddUi();
-}
-
-function getTouchLatLng(touch) {
-  if (!touch) return null;
-  const point = map.mouseEventToContainerPoint({ clientX: touch.clientX, clientY: touch.clientY });
-  return map.containerPointToLatLng(point);
-}
-
-function beginLongPress(latlng) {
-  clearLongPress();
-  model.touchStartLatLng = latlng;
-  model.touchMoved = false;
-  model.longPressTimer = window.setTimeout(() => {
-    model.longPressTimer = null;
-    if (!model.touchMoved && model.touchStartLatLng) {
-      placeDraftMarker(model.touchStartLatLng);
-    }
-  }, LONG_PRESS_MS);
-}
-
-function clearLongPress() {
-  if (model.longPressTimer) {
-    window.clearTimeout(model.longPressTimer);
-    model.longPressTimer = null;
-  }
-}
-
-function wireLongPressHandlers() {
-  const container = map.getContainer();
-
-  container.addEventListener('touchstart', (event) => {
-    if (!event.touches || event.touches.length !== 1) {
-      clearLongPress();
-      return;
-    }
-    const latlng = getTouchLatLng(event.touches[0]);
-    if (latlng) beginLongPress(latlng);
-  }, { passive: true });
-
-  container.addEventListener('touchmove', (event) => {
-    if (!model.touchStartLatLng || !event.touches || !event.touches[0]) return;
-    const latlng = getTouchLatLng(event.touches[0]);
-    if (!latlng) return;
-    if (latlng.distanceTo(model.touchStartLatLng) > 20) {
-      model.touchMoved = true;
-      clearLongPress();
-    }
-  }, { passive: true });
-
-  ['touchend', 'touchcancel'].forEach((name) => {
-    container.addEventListener(name, () => {
-      clearLongPress();
-      model.touchStartLatLng = null;
-    }, { passive: true });
-  });
+  const hasTrails = Boolean(model.trails?.features?.length);
+  els.trailSection.hidden = !hasTrails;
+  els.trailStatusText.textContent = hasTrails ? 'Labeled trail overlay loaded.' : 'No trail overlay loaded.';
 }
 
 function getPaddedBounds(bounds, factor = STATE_PADDING_FACTOR) {
-  const sw = bounds.getSouthWest();
-  const ne = bounds.getNorthEast();
-  const latPad = (ne.lat - sw.lat || 0.25) * factor;
-  const lngPad = (ne.lng - sw.lng || 0.25) * factor;
-  return L.latLngBounds(
-    [sw.lat - latPad, sw.lng - lngPad],
-    [ne.lat + latPad, ne.lng + lngPad]
-  );
+  const [[minLng, minLat], [maxLng, maxLat]] = bounds;
+  const latPad = (maxLat - minLat || 0.25) * factor;
+  const lngPad = (maxLng - minLng || 0.25) * factor;
+  return [[minLng - lngPad, minLat - latPad], [maxLng + lngPad, maxLat + latPad]];
+}
+
+function boundsContainBounds(outer, inner) {
+  return outer[0][0] <= inner[0][0] && outer[0][1] <= inner[0][1] && outer[1][0] >= inner[1][0] && outer[1][1] >= inner[1][1];
 }
 
 function focusedOnSingleState() {
-  const viewBounds = map.getBounds();
+  if (!model.map) return null;
+  const b = model.map.getBounds();
+  const viewBounds = [[b.getWest(), b.getSouth()], [b.getEast(), b.getNorth()]];
   for (const [state, bounds] of model.stateBBoxes.entries()) {
-    const padded = getPaddedBounds(bounds);
-    if (padded.contains(viewBounds.getNorthWest()) && padded.contains(viewBounds.getSouthEast())) {
-      return state;
-    }
+    if (boundsContainBounds(getPaddedBounds(bounds), viewBounds)) return state;
   }
   return null;
 }
 
 function shouldShowSiteDetails() {
-  const singleState = focusedOnSingleState();
-  return map.getZoom() >= DETAIL_ZOOM || Boolean(singleState);
+  return model.map.getZoom() >= DETAIL_ZOOM || Boolean(focusedOnSingleState());
 }
 
-function isLayerEnabled(layerKey) {
-  return model.layerState.get(layerKey) !== false;
+function enabledSites() {
+  return model.sites.filter((site) => model.layerState.get(site.layerKey) !== false);
 }
 
-function getEnabledSites() {
-  return model.sites.filter((site) => isLayerEnabled(site.layerKey));
+function buildSiteGeoJson() {
+  return { type: 'FeatureCollection', features: enabledSites().map((site) => site.feature) };
 }
 
-function popupHtmlForSite(site) {
-  const parts = [];
-  if (site.access) parts.push(`<div><strong>Access:</strong> ${escapeHtml(site.access)}</div>`);
-  if (site.cost) parts.push(`<div><strong>Cost:</strong> ${escapeHtml(site.cost)}</div>`);
-  if (site.showers) parts.push(`<div><strong>Showers:</strong> ${escapeHtml(site.showers)}</div>`);
-  if (site.description) parts.push(`<div>${escapeHtml(site.description)}</div>`);
-
-  return `
-    <div class="popup-content">
-      <div class="popup-title">${escapeHtml(site.name)}</div>
-      <div class="popup-meta">${escapeHtml(site.state)} · ${escapeHtml(site.layerLabel)}</div>
-      ${parts.join('')}
-      <div class="popup-actions">
-        <a href="${site.navigateUrl}" target="_blank" rel="noopener noreferrer">Navigate</a>
-        ${site.website ? `<a href="${escapeAttribute(site.website)}" target="_blank" rel="noopener noreferrer">Website</a>` : ''}
-      </div>
-    </div>
-  `;
-}
-
-function popupHtmlForState(state, sites) {
-  const counts = countByLayer(sites);
-  const topCounts = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
-    .map(([layerKey, count]) => {
-      const def = model.layerDefs.get(layerKey);
-      return `<div>${escapeHtml(def?.label || layerKey)}: ${count}</div>`;
+function buildStateSummaryGeoJson() {
+  const grouped = new Map();
+  for (const site of enabledSites()) {
+    if (!grouped.has(site.state)) grouped.set(site.state, []);
+    grouped.get(site.state).push(site);
+  }
+  return {
+    type: 'FeatureCollection',
+    features: [...grouped.entries()].map(([state, sites]) => {
+      const centroid = model.stateSummaryByState.get(state)?.geometry?.coordinates || [sites[0].lngLat[0], sites[0].lngLat[1]];
+      return { type: 'Feature', properties: { state, count: sites.length }, geometry: { type: 'Point', coordinates: centroid } };
     })
-    .join('');
-
-  return `
-    <div class="popup-content">
-      <div class="popup-title">${escapeHtml(state)}</div>
-      <div class="popup-meta">${sites.length} enabled campsite point${sites.length === 1 ? '' : 's'} in this state</div>
-      ${topCounts || '<div>No enabled layers in this state.</div>'}
-      <div class="popup-actions">
-        <button type="button" data-zoom-state="${escapeAttribute(state)}">Zoom to state</button>
-      </div>
-    </div>
-  `;
-}
-
-function countByLayer(items) {
-  return items.reduce((acc, item) => {
-    acc[item.layerKey] = (acc[item.layerKey] || 0) + 1;
-    return acc;
-  }, {});
-}
-
-function drawSites() {
-  siteLayer.clearLayers();
-  if (!els.toggleSitePoints.checked || !shouldShowSiteDetails()) return { visibleSites: 0, visibleByLayer: {} };
-
-  const visibleBounds = map.getBounds().pad(0.2);
-  const enabledSites = getEnabledSites();
-  let visibleSites = 0;
-  const visibleByLayer = {};
-
-  for (const site of enabledSites) {
-    const ll = L.latLng(site.latlng[0], site.latlng[1]);
-    if (!visibleBounds.contains(ll)) continue;
-    const style = model.layerDefs.get(site.layerKey) || { color: BUILTIN_BUCKETS.other.color, radius: 8 };
-    L.circleMarker(ll, {
-      radius: style.radius || 8,
-      color: style.color,
-      fillColor: style.color,
-      fillOpacity: 0.9,
-      weight: 2
-    }).bindPopup(popupHtmlForSite(site)).addTo(siteLayer);
-
-    visibleSites += 1;
-    visibleByLayer[site.layerKey] = (visibleByLayer[site.layerKey] || 0) + 1;
-  }
-
-  return { visibleSites, visibleByLayer };
-}
-
-function drawStateSummaries() {
-  stateLayer.clearLayers();
-  if (!els.toggleStateSummaries.checked || shouldShowSiteDetails()) return { visibleStates: 0, representedSites: 0 };
-
-  const enabledSites = getEnabledSites();
-  const enabledStateGroups = new Map();
-  for (const site of enabledSites) {
-    if (!enabledStateGroups.has(site.state)) enabledStateGroups.set(site.state, []);
-    enabledStateGroups.get(site.state).push(site);
-  }
-
-  let visibleStates = 0;
-  let representedSites = 0;
-
-  for (const [state, sites] of enabledStateGroups.entries()) {
-    if (!sites.length) continue;
-    const lat = sites.reduce((sum, s) => sum + s.latlng[0], 0) / sites.length;
-    const lng = sites.reduce((sum, s) => sum + s.latlng[1], 0) / sites.length;
-
-    const marker = L.circleMarker([lat, lng], {
-      radius: BUILTIN_BUCKETS.state_summary.radius,
-      color: BUILTIN_BUCKETS.state_summary.color,
-      fillColor: BUILTIN_BUCKETS.state_summary.color,
-      fillOpacity: 0.85,
-      weight: 2
-    }).bindPopup(popupHtmlForState(state, sites));
-
-    marker.addTo(stateLayer);
-
-    L.marker([lat, lng], {
-      interactive: false,
-      icon: L.divIcon({
-        className: 'state-summary-label',
-        html: `${escapeHtml(state)} · ${sites.length}`
-      })
-    }).addTo(stateLayer);
-
-    visibleStates += 1;
-    representedSites += sites.length;
-  }
-
-  return { visibleStates, representedSites };
-}
-
-function drawTrails() {
-  trailLayer.clearLayers();
-}
-
-function updateCounts(siteDrawInfo, stateDrawInfo) {
-  const mode = shouldShowSiteDetails() ? 'individual sites' : 'state summaries';
-  const focusedState = focusedOnSingleState();
-  const layerCountCards = [...model.layerDefs.values()].slice(0, 8).map((def) => {
-    const visibleCount = siteDrawInfo?.visibleByLayer?.[def.key] || 0;
-    return `
-      <div class="count-card">
-        <strong>${visibleCount}</strong>
-        <span>${escapeHtml(def.label)}</span>
-      </div>
-    `;
-  }).join('');
-
-  els.countsGrid.innerHTML = `
-    <div class="count-card"><strong>${mode}</strong><span>${focusedState ? `Focused on ${escapeHtml(focusedState)}` : 'Zoom changes when points break out'}</span></div>
-    <div class="count-card"><strong>${siteDrawInfo?.visibleSites ?? 0}</strong><span>${shouldShowSiteDetails() ? 'Visible site points' : 'Visible site points hidden while summarized'}</span></div>
-    <div class="count-card"><strong>${stateDrawInfo?.visibleStates ?? 0}</strong><span>Visible state summaries</span></div>
-    <div class="count-card"><strong>${getEnabledSites().length}</strong><span>Enabled sites total</span></div>
-    ${layerCountCards}
-  `;
-}
-
-function drawEverything() {
-  const siteDrawInfo = drawSites();
-  const stateDrawInfo = drawStateSummaries();
-  drawTrails();
-  updateCounts(siteDrawInfo, stateDrawInfo);
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
-function escapeAttribute(value) {
-  return escapeHtml(value).replaceAll('`', '&#96;');
-}
-
-map.on('moveend zoomend', drawEverything);
-map.on('click', (event) => {
-  if (!model.addMode) return;
-  placeDraftMarker(event.latlng);
-});
-
-[els.toggleStateSummaries, els.toggleSitePoints].forEach((el) => {
-  el.addEventListener('change', drawEverything);
-});
-
-if (els.toggleTrails) {
-  els.toggleTrails.addEventListener('change', drawEverything);
-}
-
-map.on('popupopen', (event) => {
-  const root = event.popup.getElement();
-  if (!root || !model.draftMarker) return;
-  const copyBtn = root.querySelector('[data-copy-draft]');
-  const clearBtn = root.querySelector('[data-clear-draft]');
-  const preview = root.querySelector('[data-draft-preview]');
-  const fields = root.querySelectorAll('[data-draft-field]');
-
-  const syncDraftFromFields = () => {
-    if (!model.draftMarker) return;
-    const updates = {};
-    fields.forEach((field) => {
-      updates[field.dataset.draftField] = field.value;
-    });
-    const payload = buildDraftPayload(model.draftMarker.getLatLng(), updates);
-    model.draftMarker.draftPayload = payload;
-    if (preview) preview.textContent = JSON.stringify(payload, null, 2);
   };
+}
 
-  fields.forEach((field) => {
-    field.addEventListener('input', syncDraftFromFields);
-    field.addEventListener('change', syncDraftFromFields);
+function buildTrailLabelGeoJson() {
+  if (!model.trails?.features?.length) return { type: 'FeatureCollection', features: [] };
+  const feats = model.trails.features.flatMap((f, idx) => {
+    const geom = f.geometry;
+    if (!geom) return [];
+    const name = f.properties?.name || f.properties?.title || `Trail ${idx + 1}`;
+    if (geom.type === 'LineString' && geom.coordinates.length) {
+      const mid = geom.coordinates[Math.floor(geom.coordinates.length / 2)];
+      return [{ type: 'Feature', properties: { name }, geometry: { type: 'Point', coordinates: mid } }];
+    }
+    if (geom.type === 'MultiLineString' && geom.coordinates.length && geom.coordinates[0].length) {
+      const line = geom.coordinates[0];
+      const mid = line[Math.floor(line.length / 2)];
+      return [{ type: 'Feature', properties: { name }, geometry: { type: 'Point', coordinates: mid } }];
+    }
+    return [];
+  });
+  return { type: 'FeatureCollection', features: feats };
+}
+
+function stateCircleRadiusExpression() {
+  return ['interpolate', ['linear'], ['get', 'count'], 1, 12, 10, 16, 25, 21, 50, 26, 100, 30];
+}
+
+function mapStyleForMode() {
+  if (model.mapStyleMode === 'satellite' && model.hasApiKey) return maptilersdk.MapStyle.SATELLITE;
+  if (model.mapStyleMode === 'outdoor' && model.hasApiKey) return maptilersdk.MapStyle.OUTDOOR;
+  return {
+    version: 8,
+    sources: {
+      osm: { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, attribution: '© OpenStreetMap contributors' }
+    },
+    layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
+  };
+}
+
+function popupHtmlForSite(props) {
+  const parts = [];
+  if (props.access) parts.push(`<div><strong>Access:</strong> ${escapeHtml(props.access)}</div>`);
+  if (props.cost) parts.push(`<div><strong>Cost:</strong> ${escapeHtml(props.cost)}</div>`);
+  if (props.showers) parts.push(`<div><strong>Showers:</strong> ${escapeHtml(props.showers)}</div>`);
+  if (props.description) parts.push(`<div>${escapeHtml(props.description)}</div>`);
+  return `<div class="popup-content"><div class="popup-title">${escapeHtml(props.name)}</div><div class="popup-meta">${escapeHtml(props.state)} · ${escapeHtml(props.layerLabel)}</div>${parts.join('')}<div class="popup-actions"><a href="${escapeAttribute(props.navigateUrl)}" target="_blank" rel="noopener noreferrer">Navigate</a>${props.website ? `<a href="${escapeAttribute(props.website)}" target="_blank" rel="noopener noreferrer">Website</a>` : ''}</div></div>`;
+}
+
+function popupHtmlForState(props) {
+  const counts = {};
+  for (const site of enabledSites().filter((s) => s.state === props.state)) counts[site.layerKey] = (counts[site.layerKey] || 0) + 1;
+  const topCounts = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([layerKey,count]) => `<div>${escapeHtml(model.layerDefs.get(layerKey)?.label || layerKey)}: ${count}</div>`).join('');
+  return `<div class="popup-content"><div class="popup-title">${escapeHtml(props.state)}</div><div class="popup-meta">${props.count} enabled campsite point${props.count === 1 ? '' : 's'} in this state</div>${topCounts || '<div>No enabled layers in this state.</div>'}<div class="popup-actions"><button type="button" id="zoomStateBtn">Zoom to state</button></div></div>`;
+}
+
+function popupHtmlForDraft(feature) {
+  const [lng, lat] = feature.geometry.coordinates;
+  const snippet = JSON.stringify({ name: 'New site', category: 'boondocking', state: '', lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), notes: '' }, null, 2);
+  return `<div class="popup-content"><div class="popup-title">Draft site pin</div><div class="popup-meta">${lat.toFixed(6)}, ${lng.toFixed(6)}</div><div>Copy this into your dataset:</div><pre style="white-space:pre-wrap;max-width:280px;">${escapeHtml(snippet)}</pre><div class="popup-actions"><button type="button" id="copyDraftBtn">Copy JSON</button></div></div>`;
+}
+
+function attachPopupHandlers() {
+  model.map.on('click', 'sites-circles', (event) => {
+    const feature = event.features?.[0];
+    if (!feature) return;
+    new maptilersdk.Popup({ closeButton: true, maxWidth: '340px' })
+      .setLngLat(feature.geometry.coordinates)
+      .setHTML(popupHtmlForSite(feature.properties))
+      .addTo(model.map);
   });
 
-  if (copyBtn) {
-    copyBtn.addEventListener('click', async () => {
-      const payload = model.draftMarker?.draftPayload;
-      if (!payload) return;
-      const text = JSON.stringify(payload, null, 2);
-      try {
-        await navigator.clipboard.writeText(text);
-        setStatus('Draft JSON copied to clipboard.');
-      } catch (err) {
-        setStatus('Clipboard copy failed. Select the JSON in the popup and copy it manually.');
-      }
+  model.map.on('click', 'state-summary-circles', (event) => {
+    const feature = event.features?.[0];
+    if (!feature) return;
+    const popup = new maptilersdk.Popup({ closeButton: true, maxWidth: '320px' })
+      .setLngLat(feature.geometry.coordinates)
+      .setHTML(popupHtmlForState(feature.properties))
+      .addTo(model.map);
+    popup.on('open', () => {
+      const btn = popup.getElement().querySelector('#zoomStateBtn');
+      btn?.addEventListener('click', () => {
+        const bounds = model.stateBBoxes.get(feature.properties.state);
+        if (bounds) model.map.fitBounds(bounds, { padding: 40, duration: 700 });
+      }, { once: true });
+    });
+  });
+
+  model.map.on('click', 'draft-circle', (event) => {
+    const feature = event.features?.[0];
+    if (!feature) return;
+    const popup = new maptilersdk.Popup({ closeButton: true, maxWidth: '360px' })
+      .setLngLat(feature.geometry.coordinates)
+      .setHTML(popupHtmlForDraft(feature))
+      .addTo(model.map);
+    popup.on('open', () => {
+      const btn = popup.getElement().querySelector('#copyDraftBtn');
+      btn?.addEventListener('click', async () => {
+        const [lng, lat] = feature.geometry.coordinates;
+        const text = JSON.stringify({ name: 'New site', category: 'boondocking', state: '', lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), notes: '' }, null, 2);
+        try { await navigator.clipboard.writeText(text); btn.textContent = 'Copied'; } catch { btn.textContent = 'Copy failed'; }
+      }, { once: true });
+    });
+  });
+
+  if (model.trails?.features?.length) {
+    model.map.on('click', 'trails-line', (event) => {
+      const feature = event.features?.[0];
+      if (!feature) return;
+      const coords = event.lngLat;
+      const p = feature.properties || {};
+      new maptilersdk.Popup({ closeButton: true, maxWidth: '320px' })
+        .setLngLat([coords.lng, coords.lat])
+        .setHTML(`<div class="popup-content"><div class="popup-title">${escapeHtml(p.name || p.title || 'Trail')}</div><div class="popup-meta">${escapeHtml(p.note || p.description || 'Trail overlay')}</div>${p.url ? `<div><a href="${escapeAttribute(p.url)}" target="_blank" rel="noopener noreferrer">More info</a></div>` : ''}</div>`)
+        .addTo(model.map);
     });
   }
+}
 
-  if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      clearDraftMarker();
-      map.closePopup();
-    });
+function ensureSource(id, sourceDef) {
+  const existing = model.map.getSource(id);
+  if (!existing) {
+    model.map.addSource(id, sourceDef);
+    return model.map.getSource(id);
   }
-});
+  if (sourceDef.data && existing.setData) existing.setData(sourceDef.data);
+  return existing;
+}
 
-document.addEventListener('click', (event) => {
-  const button = event.target.closest('[data-zoom-state]');
-  if (!button) return;
-  const state = button.dataset.zoomState;
-  const bounds = model.stateBBoxes.get(state);
-  if (bounds) map.fitBounds(bounds.pad(0.15), { padding: [30, 30] });
-});
+function addLayerIfMissing(layerDef, beforeId) {
+  if (!model.map.getLayer(layerDef.id)) model.map.addLayer(layerDef, beforeId);
+}
 
-wireLongPressHandlers();
+function firstLabelLayerId() {
+  const layers = model.map.getStyle()?.layers || [];
+  const label = layers.find((layer) => layer.type === 'symbol' && layer.layout && layer.layout['text-field']);
+  return label?.id;
+}
 
-loadData().catch((error) => {
+function applyOverlaySourcesAndLayers() {
+  const beforeId = firstLabelLayerId();
+  ensureSource('sites', { type: 'geojson', data: buildSiteGeoJson() });
+  ensureSource('state-summaries', { type: 'geojson', data: buildStateSummaryGeoJson() });
+  ensureSource('draft-site', { type: 'geojson', data: model.draftFeature ? { type: 'FeatureCollection', features: [model.draftFeature] } : { type: 'FeatureCollection', features: [] } });
+  if (model.trails?.features?.length) {
+    ensureSource('trails', { type: 'geojson', data: model.trails });
+    ensureSource('trail-labels', { type: 'geojson', data: buildTrailLabelGeoJson() });
+  }
+
+  addLayerIfMissing({
+    id: 'trails-line', type: 'line', source: 'trails', layout: { visibility: 'none' }, paint: { 'line-color': BUILTIN_BUCKETS.trail.color, 'line-width': 3.5, 'line-opacity': 0.9 }
+  }, beforeId);
+  addLayerIfMissing({
+    id: 'trails-labels', type: 'symbol', source: 'trail-labels', layout: { visibility: 'none', 'text-field': ['get', 'name'], 'text-size': 13, 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'] }, paint: { 'text-color': '#ffffff', 'text-halo-color': 'rgba(0,0,0,0.85)', 'text-halo-width': 1.8 }
+  });
+
+  addLayerIfMissing({
+    id: 'state-summary-circles', type: 'circle', source: 'state-summaries',
+    paint: {
+      'circle-radius': stateCircleRadiusExpression(),
+      'circle-color': BUILTIN_BUCKETS.state_summary.color,
+      'circle-opacity': 0.86,
+      'circle-stroke-color': '#121212',
+      'circle-stroke-width': 1.4
+    }
+  }, beforeId);
+  addLayerIfMissing({
+    id: 'state-summary-labels', type: 'symbol', source: 'state-summaries',
+    layout: { 'text-field': ['concat', ['get', 'state'], ' · ', ['to-string', ['get', 'count']]], 'text-size': 13, 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'], 'text-offset': [0, 0] },
+    paint: { 'text-color': '#ffffff', 'text-halo-color': 'rgba(0,0,0,0.85)', 'text-halo-width': 1.8 }
+  });
+
+  addLayerIfMissing({
+    id: 'sites-circles', type: 'circle', source: 'sites',
+    paint: {
+      'circle-radius': ['coalesce', ['get', 'radius'], 9],
+      'circle-color': ['get', 'color'],
+      'circle-opacity': 0.92,
+      'circle-stroke-color': '#101010',
+      'circle-stroke-width': 1.3
+    }
+  }, beforeId);
+
+  addLayerIfMissing({
+    id: 'draft-circle', type: 'circle', source: 'draft-site',
+    paint: { 'circle-radius': BUILTIN_BUCKETS.draft.radius, 'circle-color': BUILTIN_BUCKETS.draft.color, 'circle-stroke-color': '#101010', 'circle-stroke-width': 1.3 }
+  }, beforeId);
+  addLayerIfMissing({
+    id: 'draft-label', type: 'symbol', source: 'draft-site',
+    layout: { 'text-field': 'Draft site', 'text-size': 12, 'text-offset': [0, 1.5] },
+    paint: { 'text-color': '#101010', 'text-halo-color': '#ffffff', 'text-halo-width': 1.2 }
+  });
+
+  attachCursorStates();
+}
+
+function attachCursorStates() {
+  ['sites-circles', 'state-summary-circles', 'trails-line', 'draft-circle'].forEach((layerId) => {
+    if (!model.map.getLayer(layerId)) return;
+    model.map.on('mouseenter', layerId, () => { model.map.getCanvas().style.cursor = 'pointer'; });
+    model.map.on('mouseleave', layerId, () => { model.map.getCanvas().style.cursor = ''; });
+  });
+}
+
+function sourceDataForSites() {
+  const fc = buildSiteGeoJson();
+  fc.features = fc.features.map((f) => {
+    const def = model.layerDefs.get(f.properties.layerKey) || BUILTIN_BUCKETS.other;
+    return { ...f, properties: { ...f.properties, color: def.color, radius: def.radius || 9 } };
+  });
+  return fc;
+}
+
+function updateOverlays() {
+  if (!model.map || !model.styleReady) return;
+  const sitesSource = model.map.getSource('sites');
+  if (sitesSource?.setData) sitesSource.setData(sourceDataForSites());
+  const stateSource = model.map.getSource('state-summaries');
+  if (stateSource?.setData) stateSource.setData(buildStateSummaryGeoJson());
+  const draftSource = model.map.getSource('draft-site');
+  if (draftSource?.setData) draftSource.setData(model.draftFeature ? { type: 'FeatureCollection', features: [model.draftFeature] } : { type: 'FeatureCollection', features: [] });
+  const trailsSource = model.map.getSource('trails');
+  if (trailsSource?.setData && model.trails?.features?.length) trailsSource.setData(model.trails);
+  const trailLabelsSource = model.map.getSource('trail-labels');
+  if (trailLabelsSource?.setData && model.trails?.features?.length) trailLabelsSource.setData(buildTrailLabelGeoJson());
+
+  const showDetails = shouldShowSiteDetails();
+  setLayerVisibility('sites-circles', els.toggleSitePoints.checked && showDetails);
+  setLayerVisibility('state-summary-circles', els.toggleStateSummaries.checked && !showDetails);
+  setLayerVisibility('state-summary-labels', els.toggleStateSummaries.checked && !showDetails);
+  const showTrails = !els.trailSection.hidden && els.toggleTrails.checked;
+  setLayerVisibility('trails-line', showTrails);
+  setLayerVisibility('trails-labels', showTrails);
+  setLayerVisibility('draft-circle', Boolean(model.draftFeature));
+  setLayerVisibility('draft-label', Boolean(model.draftFeature));
+  updateCounts();
+}
+
+function setLayerVisibility(layerId, visible) {
+  if (model.map.getLayer(layerId)) model.map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
+}
+
+function updateCounts() {
+  const mode = shouldShowSiteDetails() ? 'individual sites' : 'state summaries';
+  const focusedState = focusedOnSingleState();
+  const visibleByLayer = {};
+  let visibleSites = 0;
+  const bounds = model.map.getBounds();
+  for (const site of enabledSites()) {
+    if (shouldShowSiteDetails() && bounds.contains(site.lngLat)) {
+      visibleSites += 1;
+      visibleByLayer[site.layerKey] = (visibleByLayer[site.layerKey] || 0) + 1;
+    }
+  }
+  const grouped = new Set(enabledSites().map((s) => s.state));
+  const cards = [...model.layerDefs.values()].slice(0, 8).map((def) => `<div class="count-card"><strong>${visibleByLayer[def.key] || 0}</strong><span>${escapeHtml(def.label)}</span></div>`).join('');
+  els.countsGrid.innerHTML = `<div class="count-card"><strong>${mode}</strong><span>${focusedState ? `Focused on ${escapeHtml(focusedState)}` : 'Zoom changes when points break out'}</span></div><div class="count-card"><strong>${visibleSites}</strong><span>${shouldShowSiteDetails() ? 'Visible site points' : 'Visible site points hidden while summarized'}</span></div><div class="count-card"><strong>${shouldShowSiteDetails() ? 0 : grouped.size}</strong><span>Visible state summaries</span></div><div class="count-card"><strong>${enabledSites().length}</strong><span>Enabled sites total</span></div>${cards}`;
+}
+
+function setDraftAt(lngLat) {
+  model.draftFeature = { type: 'Feature', properties: { name: 'Draft site' }, geometry: { type: 'Point', coordinates: [lngLat.lng, lngLat.lat] } };
+  updateOverlays();
+  new maptilersdk.Popup({ closeButton: true, maxWidth: '360px' }).setLngLat([lngLat.lng, lngLat.lat]).setHTML(popupHtmlForDraft(model.draftFeature)).addTo(model.map);
+}
+
+function setApiKeyUi() {
+  const key = getSavedApiKey();
+  els.apiKeyInput.value = key;
+  model.hasApiKey = Boolean(key);
+}
+
+function refreshStatusText() {
+  const siteMsg = model.sites.length ? `Loaded ${model.sites.length} campsites across ${model.layerDefs.size} visible layer${model.layerDefs.size === 1 ? '' : 's'}.` : 'No campsite file was found. Keep your existing sites.json in place.';
+  const mapMsg = model.hasApiKey ? `Basemap: ${model.mapStyleMode === 'satellite' ? 'Satellite' : model.mapStyleMode === 'outdoor' ? 'Outdoor' : 'OSM fallback'}${model.terrainEnabled ? ' with 3D terrain' : ''}.` : 'Using OpenStreetMap fallback until you add a MapTiler API key.';
+  const trailMsg = model.trails?.features?.length ? ' Trail overlay available.' : '';
+  els.statusText.textContent = `${siteMsg} ${mapMsg}${trailMsg}`;
+}
+
+function bindUi() {
+  els.menuToggle.addEventListener('click', () => els.menuPanel.classList.toggle('is-collapsed'));
+  els.closeMenu.addEventListener('click', () => els.menuPanel.classList.add('is-collapsed'));
+  els.toggleStateSummaries.addEventListener('change', updateOverlays);
+  els.toggleSitePoints.addEventListener('change', updateOverlays);
+  els.toggleTrails?.addEventListener('change', updateOverlays);
+  els.toggleAddMode.addEventListener('change', () => { model.addMode = els.toggleAddMode.checked; });
+  els.basemapSelect.value = model.mapStyleMode;
+  els.basemapSelect.addEventListener('change', async () => {
+    model.mapStyleMode = els.basemapSelect.value;
+    localStorage.setItem(STORAGE_KEYS.basemap, model.mapStyleMode);
+    await rebuildMapStyle();
+  });
+  els.toggleTerrain.checked = model.terrainEnabled;
+  els.toggleTerrain.addEventListener('change', async () => {
+    model.terrainEnabled = els.toggleTerrain.checked;
+    localStorage.setItem(STORAGE_KEYS.terrain, String(model.terrainEnabled));
+    await rebuildMapStyle();
+  });
+  els.togglePitch.checked = model.tiltEnabled;
+  els.togglePitch.addEventListener('change', () => {
+    model.tiltEnabled = els.togglePitch.checked;
+    localStorage.setItem(STORAGE_KEYS.tilt, String(model.tiltEnabled));
+    applyPitch();
+  });
+  els.saveKeyBtn.addEventListener('click', async () => {
+    localStorage.setItem(STORAGE_KEYS.apiKey, els.apiKeyInput.value.trim());
+    setApiKeyUi();
+    await rebuildMapStyle();
+  });
+  els.clearKeyBtn.addEventListener('click', async () => {
+    localStorage.removeItem(STORAGE_KEYS.apiKey);
+    setApiKeyUi();
+    await rebuildMapStyle();
+  });
+}
+
+function applyPitch() {
+  if (!model.map) return;
+  const wants3dView = model.hasApiKey && model.terrainEnabled && model.tiltEnabled;
+  model.map.easeTo({ pitch: wants3dView ? 65 : 0, bearing: wants3dView ? -20 : 0, duration: 500 });
+}
+
+async function rebuildMapStyle() {
+  if (!model.map) return;
+  const center = model.map.getCenter();
+  const zoom = model.map.getZoom();
+  const pitch = model.map.getPitch();
+  const bearing = model.map.getBearing();
+  model.styleReady = false;
+  if (model.hasApiKey) {
+    maptilersdk.config.apiKey = getSavedApiKey();
+  }
+  model.map.setStyle(mapStyleForMode());
+  model.map.once('style.load', () => {
+    model.styleReady = true;
+    if (model.hasApiKey && model.terrainEnabled && model.mapStyleMode !== 'osm') {
+      try { model.map.enableTerrain(); } catch {}
+    }
+    applyOverlaySourcesAndLayers();
+    attachPopupHandlers();
+    model.map.jumpTo({ center, zoom, pitch, bearing });
+    applyPitch();
+    updateOverlays();
+    refreshStatusText();
+  });
+}
+
+function initMap() {
+  setApiKeyUi();
+  if (model.hasApiKey) maptilersdk.config.apiKey = getSavedApiKey();
+  model.map = new maptilersdk.Map({
+    container: 'map',
+    style: mapStyleForMode(),
+    center: DEFAULT_CENTER,
+    zoom: DEFAULT_ZOOM,
+    terrain: false,
+    hash: false,
+    antialias: true,
+    maxPitch: 85
+  });
+  model.map.addControl(new maptilersdk.NavigationControl({ visualizePitch: true }), 'bottom-right');
+  model.map.addControl(new maptilersdk.ScaleControl({ unit: 'imperial' }), 'bottom-left');
+
+  model.map.on('style.load', () => {
+    model.styleReady = true;
+    if (model.hasApiKey && model.terrainEnabled && model.mapStyleMode !== 'osm') {
+      try { model.map.enableTerrain(); } catch {}
+    }
+    applyOverlaySourcesAndLayers();
+    attachPopupHandlers();
+    applyPitch();
+    updateOverlays();
+    refreshStatusText();
+  });
+  model.map.on('moveend', updateOverlays);
+  model.map.on('zoomend', updateOverlays);
+
+  model.map.on('click', (event) => {
+    if (!model.addMode) return;
+    setDraftAt(event.lngLat);
+    model.addMode = false;
+    els.toggleAddMode.checked = false;
+  });
+
+  const canvas = () => model.map.getCanvasContainer();
+  const cancelLongPress = () => {
+    if (model.longPressTimer) window.clearTimeout(model.longPressTimer);
+    model.longPressTimer = null;
+  };
+  canvas().addEventListener('touchstart', (event) => {
+    if (event.touches.length !== 1) return;
+    model.pressMoved = false;
+    const touch = event.touches[0];
+    model.pressStartPoint = { x: touch.clientX, y: touch.clientY };
+    cancelLongPress();
+    model.longPressTimer = window.setTimeout(() => {
+      const lngLat = model.map.unproject([touch.clientX, touch.clientY]);
+      setDraftAt(lngLat);
+    }, LONG_PRESS_MS);
+  }, { passive: true });
+  canvas().addEventListener('touchmove', (event) => {
+    if (!model.pressStartPoint || !event.touches.length) return;
+    const touch = event.touches[0];
+    const dx = touch.clientX - model.pressStartPoint.x;
+    const dy = touch.clientY - model.pressStartPoint.y;
+    if (Math.hypot(dx, dy) > 12) {
+      model.pressMoved = true;
+      cancelLongPress();
+    }
+  }, { passive: true });
+  canvas().addEventListener('touchend', cancelLongPress, { passive: true });
+  canvas().addEventListener('touchcancel', cancelLongPress, { passive: true });
+}
+
+async function main() {
+  bindUi();
+  await loadData();
+  initMap();
+  refreshStatusText();
+}
+
+main().catch((error) => {
   console.error(error);
-  model.startStatusText = 'Something tripped during load. The build is usable, but check the console and make sure your data files are present.';
-  setStatus(model.startStatusText);
-  renderLegend();
-  ensureAddSiteUi();
-  refreshAddUi();
-  drawEverything();
+  els.statusText.textContent = 'Something tripped during load. The build may still be partly usable, but check your data files and the browser console.';
 });
