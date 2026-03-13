@@ -1,4 +1,6 @@
-const VERSION = 'v18.0';
+const VERSION = 'v18.3';
+const SITE_DATA_URLS = ['data/sites.json', 'data/site-data.json', 'data/campgrounds.json', 'sites.json'];
+const TRAIL_DATA_URLS = ['data/trails.geojson', 'trails.geojson'];
 const DEFAULT_CENTER = [-87.4, 46.6];
 const DEFAULT_ZOOM = 6;
 const DETAIL_ZOOM = 7;
@@ -11,16 +13,16 @@ const STORAGE_KEYS = {
   tilt: 'campingMap.pitch'
 };
 const BUILTIN_BUCKETS = {
-  modern: { label: 'Modern', color: '#2a7fff', radius: 9 },
-  rustic: { label: 'Rustic', color: '#a46a24', radius: 9 },
-  boondocking: { label: 'Boondocking / dispersed', color: '#3f8c53', radius: 9 },
-  private: { label: 'Private campgrounds', color: '#cf4f7d', radius: 9 },
-  national_forest: { label: 'National forest campgrounds', color: '#1f8a70', radius: 9 },
-  state_federal_modern: { label: 'State / federal modern campgrounds', color: '#2a7fff', radius: 9 },
+  modern: { label: 'Modern', color: '#2a7fff', radius: 11 },
+  rustic: { label: 'Rustic', color: '#a46a24', radius: 11 },
+  boondocking: { label: 'Boondocking / dispersed', color: '#3f8c53', radius: 11 },
+  private: { label: 'Private campgrounds', color: '#cf4f7d', radius: 11 },
+  national_forest: { label: 'National forest campgrounds', color: '#1f8a70', radius: 11 },
+  state_federal_modern: { label: 'State / federal modern campgrounds', color: '#2a7fff', radius: 11 },
   state_federal_rustic: { label: 'State / federal rustic campgrounds', color: '#a46a24', radius: 9 },
-  trailhead: { label: 'Trailheads', color: '#8e5bd6', radius: 9 },
-  other: { label: 'Other campsites', color: '#949494', radius: 9 },
-  state_summary: { label: 'State summary', color: '#7f4dff', radius: 18 },
+  trailhead: { label: 'Trailheads', color: '#8e5bd6', radius: 11 },
+  other: { label: 'Other campsites', color: '#949494', radius: 11 },
+  state_summary: { label: 'State summary', color: '#7f4dff', radius: 22 },
   trail: { label: 'Trail', color: '#ff7a00', radius: 0 },
   draft: { label: 'Draft site', color: '#ffd23f', radius: 11 }
 };
@@ -48,6 +50,7 @@ const els = {
   toggleAddMode: document.getElementById('toggleAddMode')
 };
 els.versionTag.textContent = VERSION;
+if (els.toggleStateSummaries) els.toggleStateSummaries.checked = true;
 
 const model = {
   map: null,
@@ -67,7 +70,17 @@ const model = {
   draftFeature: null,
   longPressTimer: null,
   pressStartPoint: null,
-  pressMoved: false
+  pressMoved: false,
+  dataLoad: {
+    loadingSites: false,
+    loadingTrails: false,
+    sitesAttempted: [],
+    trailsAttempted: [],
+    sitesUrl: '',
+    trailsUrl: '',
+    sitesError: '',
+    trailsError: ''
+  }
 };
 
 function getSavedApiKey() {
@@ -221,23 +234,37 @@ async function fetchJsonWithTimeout(url, timeoutMs = 8000) {
   const timer = window.setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(url, { cache: 'no-store', signal: controller.signal });
-    if (!response.ok) return null;
-    return await response.json();
+    if (!response.ok) {
+      return { ok: false, url, status: response.status, reason: `HTTP ${response.status}` };
+    }
+    const json = await response.json();
+    return { ok: true, url, status: response.status, json };
+  } catch (error) {
+    const reason = error?.name === 'AbortError' ? `Timed out after ${timeoutMs} ms` : (error?.message || 'Fetch failed');
+    return { ok: false, url, status: 0, reason };
   } finally {
     window.clearTimeout(timer);
   }
 }
 
-async function loadFirstAvailable(urls) {
+async function loadFirstAvailable(urls, target = 'sites') {
+  const attempts = [];
   for (const url of urls) {
-    try {
-      const data = await fetchJsonWithTimeout(url, 8000);
-      if (data == null) continue;
-      return data;
-    } catch {
-      // keep trying
+    const result = await fetchJsonWithTimeout(url, 8000);
+    attempts.push({ url: result.url, ok: result.ok, status: result.status, reason: result.reason || '' });
+    if (result.ok) {
+      model.dataLoad[`${target}Attempted`] = attempts;
+      model.dataLoad[`${target}Url`] = result.url;
+      model.dataLoad[`${target}Error`] = '';
+      return result.json;
     }
   }
+  model.dataLoad[`${target}Attempted`] = attempts;
+  model.dataLoad[`${target}Url`] = '';
+  const failureSummary = attempts.length
+    ? attempts.map((attempt) => `${attempt.url}: ${attempt.reason || attempt.status || 'failed'}`).join(' | ')
+    : 'No URLs attempted';
+  model.dataLoad[`${target}Error`] = failureSummary;
   return null;
 }
 
@@ -252,19 +279,28 @@ function normalizeSiteArray(sitesRaw) {
 }
 
 async function loadData() {
-  const sitesRaw = await loadFirstAvailable(['data/sites.json', 'data/site-data.json', 'data/campgrounds.json', 'sites.json']);
-  const trailRaw = await loadFirstAvailable(['data/trails.geojson', 'trails.geojson']);
+  model.dataLoad.loadingSites = true;
+  model.dataLoad.loadingTrails = true;
+  refreshStatusText();
+
+  const sitesRaw = await loadFirstAvailable(SITE_DATA_URLS, 'sites');
+  model.dataLoad.loadingSites = false;
   model.sites = normalizeSiteArray(sitesRaw).map(normalizeSite).filter(Boolean);
+
+  const trailRaw = await loadFirstAvailable(TRAIL_DATA_URLS, 'trails');
+  model.dataLoad.loadingTrails = false;
   model.trails = trailRaw?.features?.length ? trailRaw : null;
+
   buildLayerDefinitions();
   buildStateGroups();
   renderLayerControls();
   renderLegend();
   syncTrailUi();
+
   if (model.map && model.styleReady) {
     updateOverlays();
-    refreshStatusText();
   }
+  refreshStatusText();
 }
 
 function buildLayerDefinitions() {
@@ -311,7 +347,7 @@ function buildStateGroups() {
 
 function renderLayerControls() {
   if (!model.layerDefs.size) {
-    els.layerToggleList.innerHTML = '<p>No campsite layers were detected yet.</p>';
+    els.layerToggleList.innerHTML = '<p>No campsite layers detected yet. If you expected them, the status line now tells you which site-data URLs were tried.</p>';
     return;
   }
   els.layerToggleList.innerHTML = '';
@@ -414,7 +450,7 @@ function buildTrailLabelGeoJson() {
 }
 
 function stateCircleRadiusExpression() {
-  return ['interpolate', ['linear'], ['get', 'count'], 1, 12, 10, 16, 25, 21, 50, 26, 100, 30];
+  return ['interpolate', ['linear'], ['get', 'count'], 1, 16, 10, 20, 25, 26, 50, 32, 100, 38];
 }
 
 function mapStyleForMode() {
@@ -522,6 +558,15 @@ function addLayerIfMissing(layerDef, beforeId) {
   if (!model.map.getLayer(layerDef.id)) model.map.addLayer(layerDef, beforeId);
 }
 
+function moveOverlayLayersToTop() {
+  const order = ['trails-line', 'state-summary-circles', 'state-summary-labels', 'sites-circles', 'draft-circle', 'draft-label', 'trails-labels'];
+  for (const id of order) {
+    if (model.map.getLayer(id)) {
+      try { model.map.moveLayer(id); } catch {}
+    }
+  }
+}
+
 function firstLabelLayerId() {
   const layers = model.map.getStyle()?.layers || [];
   const label = layers.find((layer) => layer.type === 'symbol' && layer.layout && layer.layout['text-field']);
@@ -550,7 +595,10 @@ function applyOverlaySourcesAndLayers() {
     paint: {
       'circle-radius': stateCircleRadiusExpression(),
       'circle-color': BUILTIN_BUCKETS.state_summary.color,
-      'circle-opacity': 0.86,
+      'circle-opacity': 0.9,
+      'circle-pitch-alignment': 'viewport',
+      'circle-pitch-scale': 'viewport',
+      'circle-emissive-strength': 1,
       'circle-stroke-color': '#121212',
       'circle-stroke-width': 1.4
     }
@@ -564,9 +612,12 @@ function applyOverlaySourcesAndLayers() {
   addLayerIfMissing({
     id: 'sites-circles', type: 'circle', source: 'sites',
     paint: {
-      'circle-radius': ['coalesce', ['get', 'radius'], 9],
+      'circle-radius': ['coalesce', ['get', 'radius'], 11],
       'circle-color': ['get', 'color'],
-      'circle-opacity': 0.92,
+      'circle-opacity': 0.96,
+      'circle-pitch-alignment': 'viewport',
+      'circle-pitch-scale': 'viewport',
+      'circle-emissive-strength': 1,
       'circle-stroke-color': '#101010',
       'circle-stroke-width': 1.3
     }
@@ -583,6 +634,7 @@ function applyOverlaySourcesAndLayers() {
   });
 
   attachCursorStates();
+  moveOverlayLayersToTop();
 }
 
 function attachCursorStates() {
@@ -616,9 +668,10 @@ function updateOverlays() {
   if (trailLabelsSource?.setData && model.trails?.features?.length) trailLabelsSource.setData(buildTrailLabelGeoJson());
 
   const showDetails = shouldShowSiteDetails();
+  const forceStateSummaries = !showDetails && enabledSites().length > 0;
   setLayerVisibility('sites-circles', els.toggleSitePoints.checked && showDetails);
-  setLayerVisibility('state-summary-circles', els.toggleStateSummaries.checked && !showDetails);
-  setLayerVisibility('state-summary-labels', els.toggleStateSummaries.checked && !showDetails);
+  setLayerVisibility('state-summary-circles', forceStateSummaries || (els.toggleStateSummaries.checked && !showDetails));
+  setLayerVisibility('state-summary-labels', !showDetails && els.toggleStateSummaries.checked);
   const showTrails = !els.trailSection.hidden && els.toggleTrails.checked;
   setLayerVisibility('trails-line', showTrails);
   setLayerVisibility('trails-labels', showTrails);
@@ -632,6 +685,7 @@ function setLayerVisibility(layerId, visible) {
 }
 
 function updateCounts() {
+  if (!model.map) return;
   const mode = shouldShowSiteDetails() ? 'individual sites' : 'state summaries';
   const focusedState = focusedOnSingleState();
   const visibleByLayer = {};
@@ -645,7 +699,14 @@ function updateCounts() {
   }
   const grouped = new Set(enabledSites().map((s) => s.state));
   const cards = [...model.layerDefs.values()].slice(0, 8).map((def) => `<div class="count-card"><strong>${visibleByLayer[def.key] || 0}</strong><span>${escapeHtml(def.label)}</span></div>`).join('');
-  els.countsGrid.innerHTML = `<div class="count-card"><strong>${mode}</strong><span>${focusedState ? `Focused on ${escapeHtml(focusedState)}` : 'Zoom changes when points break out'}</span></div><div class="count-card"><strong>${visibleSites}</strong><span>${shouldShowSiteDetails() ? 'Visible site points' : 'Visible site points hidden while summarized'}</span></div><div class="count-card"><strong>${shouldShowSiteDetails() ? 0 : grouped.size}</strong><span>Visible state summaries</span></div><div class="count-card"><strong>${enabledSites().length}</strong><span>Enabled sites total</span></div>${cards}`;
+  const siteSource = model.map.getSource('sites');
+  const summarySource = model.map.getSource('state-summaries');
+  const debugCards = `
+    <div class="count-card"><strong>${model.sites.length}</strong><span>Loaded campsite records</span></div>
+    <div class="count-card"><strong>${model.layerDefs.size}</strong><span>Detected campsite layers</span></div>
+    <div class="count-card"><strong>${siteSource ? 'yes' : 'no'}</strong><span>Sites source on map</span></div>
+    <div class="count-card"><strong>${summarySource ? 'yes' : 'no'}</strong><span>State summary source on map</span></div>`;
+  els.countsGrid.innerHTML = `<div class="count-card"><strong>${mode}</strong><span>${focusedState ? `Focused on ${escapeHtml(focusedState)}` : 'Never fewer than one summary point per state when zoomed out'}</span></div><div class="count-card"><strong>${visibleSites}</strong><span>${shouldShowSiteDetails() ? 'Visible site points' : 'Visible site points hidden while summarized'}</span></div><div class="count-card"><strong>${shouldShowSiteDetails() ? 0 : grouped.size}</strong><span>Visible state summaries</span></div><div class="count-card"><strong>${enabledSites().length}</strong><span>Enabled sites total</span></div>${debugCards}${cards}`;
 }
 
 function setDraftAt(lngLat) {
@@ -660,11 +721,37 @@ function setApiKeyUi() {
   model.hasApiKey = Boolean(key);
 }
 
+function describeAttempts(attempts) {
+  if (!attempts?.length) return 'No URLs tried yet.';
+  return attempts.map((attempt) => `${attempt.url} → ${attempt.ok ? 'OK' : (attempt.reason || attempt.status || 'failed')}`).join(' | ');
+}
+
 function refreshStatusText() {
-  const siteMsg = model.sites.length ? `Loaded ${model.sites.length} campsites across ${model.layerDefs.size} visible layer${model.layerDefs.size === 1 ? '' : 's'}.` : 'No campsite file was found. Keep your existing sites.json in place.';
-  const mapMsg = model.hasApiKey ? `Basemap: ${model.mapStyleMode === 'satellite' ? 'Satellite' : model.mapStyleMode === 'outdoor' ? 'Outdoor' : 'OSM fallback'}${model.terrainEnabled ? ' with 3D terrain' : ''}.` : 'Using OpenStreetMap fallback until you add a MapTiler API key.';
-  const trailMsg = model.trails?.features?.length ? ' Trail overlay available.' : '';
-  els.statusText.textContent = `${siteMsg} ${mapMsg}${trailMsg}`;
+  const siteMsg = model.dataLoad.loadingSites
+    ? `Loading campsite data… trying ${SITE_DATA_URLS.join(', ')}`
+    : model.sites.length
+      ? `Loaded ${model.sites.length} campsites across ${model.layerDefs.size} detected layer${model.layerDefs.size === 1 ? '' : 's'} from ${model.dataLoad.sitesUrl || 'an unknown file'}.`
+      : `No campsite records loaded. Tried: ${describeAttempts(model.dataLoad.sitesAttempted)}`;
+
+  const trailMsg = model.dataLoad.loadingTrails
+    ? ' Loading trail data…'
+    : model.trails?.features?.length
+      ? ` Trail overlay loaded from ${model.dataLoad.trailsUrl || 'trail file'}.`
+      : model.dataLoad.trailsAttempted.length
+        ? ` Trail overlay missing. Tried: ${describeAttempts(model.dataLoad.trailsAttempted)}`
+        : '';
+
+  const basemapLabel = model.mapStyleMode === 'satellite'
+    ? 'Satellite'
+    : model.mapStyleMode === 'outdoor'
+      ? 'Outdoor'
+      : 'OSM fallback';
+
+  const mapMsg = model.hasApiKey
+    ? ` Basemap: ${basemapLabel}${model.terrainEnabled ? ' with 3D terrain' : ''}${model.tiltEnabled ? ' and tilt' : ''}.`
+    : ' Using OpenStreetMap fallback until you add a MapTiler API key.';
+
+  els.statusText.textContent = `${siteMsg}${mapMsg}${trailMsg}`;
 }
 
 function bindUi() {
@@ -695,19 +782,39 @@ function bindUi() {
   els.saveKeyBtn.addEventListener('click', async () => {
     localStorage.setItem(STORAGE_KEYS.apiKey, els.apiKeyInput.value.trim());
     setApiKeyUi();
+    els.saveKeyBtn.disabled = true;
+    const previousText = els.saveKeyBtn.textContent;
+    els.saveKeyBtn.textContent = 'Saving…';
+    refreshStatusText();
     await rebuildMapStyle();
+    els.saveKeyBtn.textContent = 'Saved';
+    window.setTimeout(() => {
+      els.saveKeyBtn.textContent = previousText;
+      els.saveKeyBtn.disabled = false;
+    }, 900);
   });
   els.clearKeyBtn.addEventListener('click', async () => {
     localStorage.removeItem(STORAGE_KEYS.apiKey);
     setApiKeyUi();
+    refreshStatusText();
     await rebuildMapStyle();
   });
+}
+
+function setRotationInteractions() {
+  if (!model.map) return;
+  try { model.map.dragRotate?.enable(); } catch {}
+  try { model.map.touchZoomRotate?.enable(); } catch {}
+  try { model.map.touchZoomRotate?.enableRotation(); } catch {}
+  try { model.map.touchPitch?.enable(); } catch {}
 }
 
 function applyPitch() {
   if (!model.map) return;
   const wants3dView = model.hasApiKey && model.terrainEnabled && model.tiltEnabled;
-  model.map.easeTo({ pitch: wants3dView ? 65 : 0, bearing: wants3dView ? -20 : 0, duration: 500 });
+  const currentBearing = Number.isFinite(model.map.getBearing?.()) ? model.map.getBearing() : 0;
+  model.map.easeTo({ pitch: wants3dView ? 65 : 0, bearing: currentBearing, duration: 500 });
+  setRotationInteractions();
 }
 
 async function rebuildMapStyle() {
@@ -729,6 +836,7 @@ async function rebuildMapStyle() {
     applyOverlaySourcesAndLayers();
     attachPopupHandlers();
     model.map.jumpTo({ center, zoom, pitch, bearing });
+    setRotationInteractions();
     applyPitch();
     updateOverlays();
     refreshStatusText();
@@ -746,7 +854,10 @@ function initMap() {
     terrain: false,
     hash: false,
     antialias: true,
-    maxPitch: 85
+    maxPitch: 85,
+    dragRotate: true,
+    touchZoomRotate: true,
+    touchPitch: true
   });
   model.map.addControl(new maptilersdk.NavigationControl({ visualizePitch: true }), 'bottom-right');
   model.map.addControl(new maptilersdk.ScaleControl({ unit: 'imperial' }), 'bottom-left');
@@ -758,6 +869,7 @@ function initMap() {
     }
     applyOverlaySourcesAndLayers();
     attachPopupHandlers();
+    setRotationInteractions();
     applyPitch();
     updateOverlays();
     refreshStatusText();
@@ -805,6 +917,11 @@ function initMap() {
 async function main() {
   bindUi();
   initMap();
+  window.campingMapDebug = {
+    model,
+    reloadData: loadData,
+    forceOverlayRefresh: updateOverlays
+  };
   refreshStatusText();
   loadData().catch((error) => {
     console.error(error);
