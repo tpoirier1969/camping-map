@@ -162,3 +162,55 @@ body { overflow: hidden; }
   .key-row { grid-template-columns: 1fr; }
   .counts-grid { grid-template-columns: 1fr 1fr; }
 }
+
+.hidden-by-default{display:none;}
+#zoomReadout {
+  position: fixed;
+  right: 12px;
+  bottom: max(86px, calc(env(safe-area-inset-bottom) + 72px));
+  z-index: 99997;
+  background: rgba(14,26,22,0.88);
+  color: #f3f0e7;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 12px;
+  padding: 7px 10px;
+  font-size: 14px;
+  line-height: 1;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+.symbol-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--preview-size);
+  height: var(--preview-size);
+  color: var(--preview-color);
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.55)) drop-shadow(0 0 3px rgba(255,255,255,0.10));
+  flex: 0 0 auto;
+}
+.symbol-preview svg { width: 100%; height: 100%; overflow: visible; }
+.site-dom-marker.symbol-marker {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  color: inherit;
+}
+.site-dom-marker.symbol-marker svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0 2px rgba(255,255,255,0.65)) drop-shadow(0 1px 3px rgba(0,0,0,0.95));
+}
+.legend-item .symbol-preview { --preview-size: 22px; }
+.toggle-list .symbol-preview { --preview-size: 20px; }
+.state-summary-label {
+  color: #fff8e8;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(0,0,0,0.92), 0 0 2px rgba(0,0,0,1);
+}
+@media (max-width: 640px) {
+  #zoomReadout { right: 10px; bottom: max(76px, calc(env(safe-area-inset-bottom) + 64px)); }
+}

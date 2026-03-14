@@ -1,4 +1,4 @@
-Camping Map v18.1
+Camping Map v18.9
 
 This build uses MapLibre + MapTiler styles.
 

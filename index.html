@@ -14,19 +14,20 @@
 <body>
   <div id="appShell">
     <div id="map"></div>
+    <div id="zoomReadout" aria-live="polite">Zoom: --</div>
 
     <button id="menuToggle" aria-label="Menu" title="Map options">☰</button>
 
     <aside id="menuPanel" class="is-open">
       <div class="panel-header">
         <div>
-          <h1>Camping Map <span id="versionTag">v18.6</span></h1>
+          <h1>Camping Map <span id="versionTag">v18.9</span></h1>
           <p id="statusText">Loading map data…</p>
         </div>
         <button id="closeMenu" class="ghost-button" aria-label="Close menu">✕</button>
       </div>
 
-      <section class="panel-section key-section">
+      <section class="panel-section key-section" id="keySection">
         <h2>Map engine</h2>
         <p class="note">Outdoor, Satellite, and 3D terrain need a MapTiler API key.</p>
         <label class="field-label" for="apiKeyInput">MapTiler API key</label>
@@ -35,6 +36,7 @@
           <button id="saveKeyBtn" class="ghost-button" type="button">Save</button>
           <button id="clearKeyBtn" class="ghost-button" type="button">Clear</button>
         </div>
+        <button id="revealKeySectionBtn" class="ghost-button hidden-by-default" type="button" hidden>Map key saved — manage</button>
       </section>
 
       <section class="panel-section">
@@ -60,7 +62,7 @@
         <div id="layerToggleList" class="toggle-list"></div>
       </section>
 
-      <section class="panel-section" id="trailSection" hidden>
+      <section class="panel-section" id="trailSection" hidden aria-hidden="true">
         <h2>Trails</h2>
         <label class="switch-row"><input type="checkbox" id="toggleTrails" checked> Show labeled trail overlays</label>
         <p id="trailStatusText">No trail overlay loaded.</p>
@@ -85,6 +87,6 @@
   </div>
 
   <script src="https://cdn.maptiler.com/maptiler-sdk-js/latest/maptiler-sdk.umd.min.js"></script>
-  <script src="app-v18.6.js"></script>
+  <script src="app-v18.9.js"></script>
 </body>
 </html>
