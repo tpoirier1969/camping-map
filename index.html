@@ -21,12 +21,23 @@
     <aside id="menuPanel" class="is-open">
       <div class="panel-header">
         <div>
-          <h1>Camping Map <span id="versionTag">v19.4</span></h1>
+          <h1>Camping Map <span id="versionTag">v19.9</span></h1>
           <p id="statusText">Loading map data…</p>
         </div>
         <button id="closeMenu" class="ghost-button" aria-label="Close menu">✕</button>
       </div>
 
+
+      <section class="panel-section">
+        <h2>Find an area</h2>
+        <label class="field-label" for="searchInput">Search place or coordinates</label>
+        <div class="search-row">
+          <input id="searchInput" type="text" placeholder="City, park, address, or lat, lng">
+          <button id="searchBtn" class="ghost-button" type="button">Go</button>
+        </div>
+        <p id="searchStatus" class="note" aria-live="polite"></p>
+        <div id="searchResults" class="search-results" hidden></div>
+      </section>
       <section class="panel-section">
         <h2>Basemap</h2>
         <label class="field-label" for="basemapSelect">Map style</label>
@@ -60,6 +71,7 @@
         <h2>Display behavior</h2>
         <label class="switch-row"><input type="checkbox" id="toggleStateSummaries" checked> State summary symbols when zoomed out</label>
         <label class="switch-row"><input type="checkbox" id="toggleSitePoints" checked> Individual campsite symbols when zoomed in</label>
+        <div id="summaryLegendKey" class="summary-key" aria-label="Summary circle legend"></div>
       </section>
 
       <section class="panel-section key-section" id="keySection">
@@ -78,6 +90,6 @@
   </div>
 
   <script src="https://cdn.maptiler.com/maptiler-sdk-js/latest/maptiler-sdk.umd.min.js"></script>
-  <script src="app-v19.5.js"></script>
+  <script src="app-v19.9.js"></script>
 </body>
 </html>
