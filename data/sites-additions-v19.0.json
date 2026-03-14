@@ -1,0 +1,30 @@
+[
+  {
+    "id": "v19-0-tc-01",
+    "name": "Guernsey Lake State Forest Campground",
+    "latitude": 44.7151,
+    "longitude": -85.32038,
+    "state": "MI",
+    "owner": "Michigan DNR",
+    "layerLabel": "State Campgrounds",
+    "category": "state rustic",
+    "website": "https://www.michigan.gov/recsearch/sfcampgroundsa-m/guernseylake",
+    "description": "Rustic state forest campground west of Kalkaska with 35 sites, walk-in campsites, and direct access to the Sand Lakes Quiet Area and nearby trail network.",
+    "cost": "$20",
+    "showers": "No"
+  },
+  {
+    "id": "v19-0-tc-02",
+    "name": "Lake Dubonnet Trail Camp",
+    "latitude": 44.697605,
+    "longitude": -85.781303,
+    "state": "MI",
+    "owner": "Michigan DNR",
+    "layerLabel": "State Campgrounds",
+    "category": "state rustic",
+    "website": "https://www.michigan.gov/recsearch/sfcampgroundsa-m/lakedubonnettrail",
+    "description": "Group-oriented rustic trail camp near Interlochen on the Shore-to-Shore Trail, primarily used by equestrian campers but also useful as a mapped overnight destination.",
+    "cost": "Varies",
+    "showers": "No"
+  }
+]
