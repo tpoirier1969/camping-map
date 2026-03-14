@@ -244,3 +244,65 @@ body { overflow: hidden; }
 .summary-row { display:flex; align-items:center; gap:5px; font-weight:700; font-size:13px; line-height:1; }
 .summary-row .symbol-preview { --preview-size: 18px; }
 #countsPanel { display:none; }
+
+
+/* v19.3 summary markers: back to circles, no boxed cards */
+.summary-dom-marker {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+.summary-state-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(245,240,224,0.94);
+  color: #1d1d1d;
+  border: 1px solid rgba(0,0,0,0.25);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+.summary-marker-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.summary-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1.4px solid rgba(0,0,0,0.55);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  color: #111;
+  background: rgba(245,240,224,0.96);
+}
+.summary-badge .summary-badge-icon .symbol-preview {
+  --preview-size: 13px;
+}
+.summary-badge .summary-badge-icon {
+  line-height: 0;
+  margin-top: 1px;
+}
+.summary-badge-count {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  margin-top: 1px;
+}
+.summary-badge-state { background: rgba(180, 216, 122, 0.96); }
+.summary-badge-boondocking { background: rgba(79, 168, 61, 0.96); }
+.summary-badge-info { background: rgba(246, 211, 62, 0.96); }
