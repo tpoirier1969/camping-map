@@ -1,4 +1,4 @@
-const VERSION = 'v20.4.6';
+const VERSION = 'v20.4.8';
 const DEFAULT_API_KEYS = {
   maptiler: '3jVO6TokbQhyTqtAmF8G',
   thunderforest: 'c0ceacbdeb224697bdedd71af8b20abd'

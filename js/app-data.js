@@ -24,8 +24,6 @@ function ensureBasemapOptions() {
     ['satellite', 'Satellite Hybrid'],
     ['topo', 'Topo'],
     ['tf_outdoors', 'Thunderforest Outdoors - Disabled'],
-    ['tf_landscape', 'Thunderforest Landscape - Disabled'],
-    ['tf_mobile_atlas', 'Thunderforest Mobile Atlas - Disabled'],
     ['osm', 'OpenStreetMap fallback']
   ];
   for (const [value, label] of wanted) {
@@ -428,12 +426,17 @@ function bucketSymbol(bucket) {
   switch (bucket) {
     case 'federal':
     case 'national_forest':
-      return 'sign';
+      return 'federal-arrowhead';
     case 'state':
+      return 'state-flag';
     case 'modern':
+    case 'state_federal_modern':
+      return 'shower';
     case 'rustic':
-    case 'state_local':
+    case 'state_federal_rustic':
       return 'tent';
+    case 'state_local':
+      return 'flag';
     case 'local':
       return 'pin';
     case 'boondocking':
@@ -453,17 +456,26 @@ function symbolSvg(symbol, color = 'currentColor') {
   const fill = color;
   const dark = '#2b1d12';
   const light = '#fff3d8';
+  const federalBrown = '#5a3724';
+  const federalText = '#f4ead2';
   switch (symbol) {
     case 'tree':
       return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6 18 24h8L15 39h10l-6 11h26l-6-11h10L38 24h8L32 6Z" fill="${fill}" stroke="${dark}" stroke-width="2.6" stroke-linejoin="round"/><path d="M32 49v9" stroke="${dark}" stroke-width="4" stroke-linecap="round"/></svg>`;
     case 'arrowhead':
       return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6c-9 8-15 21-13 37 5 2 9 6 13 15 4-9 8-13 13-15 2-16-4-29-13-37Z" fill="${fill}" stroke="${dark}" stroke-width="2.6" stroke-linejoin="round"/><path d="M24 25c3 1 5 3 8 6 3-3 5-5 8-6" fill="none" stroke="${light}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 35h10" stroke="${light}" stroke-width="3" stroke-linecap="round"/></svg>`;
+    case 'federal-arrowhead':
+      return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 5.5 50 12.5v17.2c0 13.5-8.2 22.5-18 28.8-9.8-6.3-18-15.3-18-28.8V12.5L32 5.5Z" fill="${federalBrown}" stroke="${dark}" stroke-width="2.6" stroke-linejoin="round"/><path d="M22 22h20" stroke="${federalText}" stroke-width="3.2" stroke-linecap="round"/><path d="M21 29h22" stroke="${federalText}" stroke-width="3.2" stroke-linecap="round"/><path d="M24 36h16" stroke="${federalText}" stroke-width="3.2" stroke-linecap="round"/></svg>`;
     case 'tent':
       return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M9 49 28 18c1.7-2.8 5.7-2.8 7.4 0L55 49H9Z" fill="${fill}" stroke="${dark}" stroke-width="2.8" stroke-linejoin="round"/><path d="M32 18v31" stroke="${light}" stroke-width="3.2" stroke-linecap="round"/><path d="M19 49 32 29l13 20" fill="none" stroke="${light}" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 49h36" stroke="${dark}" stroke-width="2.4" stroke-linecap="round"/></svg>`;
+    case 'state-flag':
+    case 'flag':
+      return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 9v46" stroke="${dark}" stroke-width="4.4" stroke-linecap="round"/><path d="M20 12h24l-6.5 8 6.5 8H20Z" fill="${fill}" stroke="${dark}" stroke-width="2.6" stroke-linejoin="round"/><path d="M24 18h12" stroke="${light}" stroke-width="2.8" stroke-linecap="round"/><path d="M24 24h10" stroke="${light}" stroke-width="2.8" stroke-linecap="round"/><path d="M16 54h12" stroke="${dark}" stroke-width="3.4" stroke-linecap="round"/></svg>`;
     case 'campfire':
       return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M27 13c5 7 4 12 1 16-5 5-6 9-6 13 0 8 5 13 10 13s10-5 10-13c0-5-2-10-8-16 2 6-1 9-3 10 0-7-1-14-4-23Z" fill="${fill}" stroke="${dark}" stroke-width="2.6" stroke-linejoin="round"/><path d="M18 49h28" stroke="${dark}" stroke-width="3.2" stroke-linecap="round"/><path d="M22 54 31 45M42 54 33 45" stroke="${light}" stroke-width="3.2" stroke-linecap="round"/></svg>`;
     case 'sign':
       return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M31 11v42" stroke="${dark}" stroke-width="4.4" stroke-linecap="round"/><path d="M18 18h23l5 4-5 4H18Z" fill="${fill}" stroke="${dark}" stroke-width="2.7" stroke-linejoin="round"/><path d="M14 31h19l5 4-5 4H14Z" fill="${light}" stroke="${dark}" stroke-width="2.5" stroke-linejoin="round"/><path d="M25 53h12" stroke="${dark}" stroke-width="3.5" stroke-linecap="round"/></svg>`;
+    case 'shower':
+      return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M20 18h16c5 0 9 4 9 9v4" fill="none" stroke="${dark}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M41 31h8" stroke="${dark}" stroke-width="4" stroke-linecap="round"/><circle cx="47" cy="31" r="3.6" fill="${fill}" stroke="${dark}" stroke-width="2.4"/><path d="M44 38v10m6-9v8m-12-5v7" stroke="${light}" stroke-width="2.8" stroke-linecap="round"/><circle cx="20" cy="28" r="4.5" fill="${fill}" stroke="${dark}" stroke-width="2.4"/><path d="M20 33v12m0 0-6 9m6-9 6 9m-6-18-6 5m6-5 6 5" fill="none" stroke="${dark}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     case 'pin':
       return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 9c10 0 18 8 18 18 0 11-10 18-18 28-8-10-18-17-18-28 0-10 8-18 18-18Z" fill="${fill}" stroke="${dark}" stroke-width="2.8" stroke-linejoin="round"/><circle cx="32" cy="27" r="6.5" fill="${light}" stroke="${dark}" stroke-width="2.2"/></svg>`;
     case 'camper':
@@ -691,6 +703,22 @@ function normalizeSiteArray(sitesRaw) {
         : [];
 }
 
+function normalizeFeatureCollection(raw) {
+  if (!raw) return { type: 'FeatureCollection', features: [] };
+  if (raw.type === 'FeatureCollection' && Array.isArray(raw.features)) return raw;
+  if (raw.type === 'Feature' && raw.geometry) return { type: 'FeatureCollection', features: [raw] };
+  if (Array.isArray(raw?.features)) return { type: 'FeatureCollection', features: raw.features };
+  if (Array.isArray(raw)) return { type: 'FeatureCollection', features: raw.filter((feature) => feature && feature.type === 'Feature' && feature.geometry) };
+  return { type: 'FeatureCollection', features: [] };
+}
+
+async function loadBoondockingZoneData() {
+  const zonesRaw = await loadFirstAvailable(BOONDOCKING_ZONE_URLS, 'boondockingZones');
+  model.boondockingZones = normalizeFeatureCollection(zonesRaw);
+  if (model.map && model.styleReady) updateOverlays();
+  return model.boondockingZones;
+}
+
 async function loadAllAvailableSiteArrays(urls, target = 'siteExtras') {
   const results = await Promise.all(urls.map((url) => fetchJsonWithTimeout(url, 3500)));
   const loaded = [];
@@ -713,11 +741,19 @@ async function loadData() {
   model.dataLoad.trailsAttempted = [];
   model.dataLoad.sitesError = '';
   model.dataLoad.trailsError = '';
+  model.boondockingZones = { type: 'FeatureCollection', features: [] };
   refreshStatusText();
 
   const trailPromise = loadTrailData().finally(() => {
     model.dataLoad.loadingTrails = false;
     refreshStatusText();
+  });
+
+  const zonePromise = loadBoondockingZoneData().catch((error) => {
+    console.error('Boondocking zone load failed', error);
+    model.boondockingZones = { type: 'FeatureCollection', features: [] };
+    if (model.map && model.styleReady) updateOverlays();
+    return model.boondockingZones;
   });
 
   const sitesRaw = await loadFirstAvailable(SITE_DATA_URLS, 'sites').finally(() => {
@@ -738,6 +774,7 @@ async function loadData() {
   if (model.map && model.styleReady) {
     updateOverlays();
   }
+  await zonePromise;
   refreshStatusText();
   setLoadingState?.(false);
 

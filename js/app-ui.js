@@ -198,14 +198,10 @@ function refreshStatusText() {
         ? 'Outdoor'
         : model.mapStyleMode === 'tf_outdoors'
           ? 'Thunderforest Outdoors'
-          : model.mapStyleMode === 'tf_landscape'
-            ? 'Thunderforest Landscape'
-          : model.mapStyleMode === 'tf_mobile_atlas'
-            ? 'Thunderforest Mobile Atlas'
-            : 'OSM fallback';
+          : 'OSM fallback';
 
   const usingMapTiler = ['satellite', 'topo', 'outdoor'].includes(model.mapStyleMode);
-  const usingThunderforest = ['tf_outdoors', 'tf_landscape'].includes(model.mapStyleMode);
+  const usingThunderforest = model.mapStyleMode === 'tf_outdoors';
   const mapMsg = usingMapTiler && model.hasApiKey
     ? ` Basemap: ${basemapLabel}${model.terrainEnabled ? ' with 3D terrain' : ''}${model.tiltEnabled ? ' and tilt' : ''}.`
     : usingThunderforest && getSavedThunderforestKey()
@@ -249,7 +245,7 @@ function bindUi() {
   els.toggleBoondockingZones?.addEventListener('change', updateOverlays);
   els.toggleAddMode?.addEventListener('change', () => { model.addMode = els.toggleAddMode.checked; });
 
-  els.basemapSelect.value = ['outdoor','satellite','topo','tf_outdoors','tf_landscape','tf_mobile_atlas','osm'].includes(model.mapStyleMode) ? model.mapStyleMode : 'outdoor';
+  els.basemapSelect.value = ['outdoor','satellite','topo','tf_outdoors','osm'].includes(model.mapStyleMode) ? model.mapStyleMode : 'outdoor';
   refreshBasemapUiState();
   els.basemapSelect?.addEventListener('change', async () => {
     model.mapStyleMode = els.basemapSelect.value;

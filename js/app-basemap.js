@@ -121,8 +121,6 @@ function mapStyleForMode() {
     if (model.mapStyleMode === 'outdoor') return buildMapTilerStyleUrl('outdoor-v2');
   }
   if (model.mapStyleMode === 'tf_outdoors') return buildThunderforestRasterStyle('outdoors') || buildOsmFallbackStyle();
-  if (model.mapStyleMode === 'tf_landscape') return buildThunderforestRasterStyle('landscape') || buildOsmFallbackStyle();
-  if (model.mapStyleMode === 'tf_mobile_atlas') return buildThunderforestRasterStyle('mobile-atlas') || buildOsmFallbackStyle();
   return buildOsmFallbackStyle();
 }
 
@@ -143,35 +141,32 @@ function refreshBasemapUiState() {
       opt.textContent = hasThunderforestKey ? 'Thunderforest Outdoors' : 'Thunderforest Outdoors - Disabled';
       return;
     }
-    if (opt.value === 'tf_landscape') {
-      opt.disabled = !hasThunderforestKey;
-      opt.textContent = hasThunderforestKey ? 'Thunderforest Landscape' : 'Thunderforest Landscape - Disabled';
-      return;
-    }
-    if (opt.value === 'tf_mobile_atlas') {
-      opt.disabled = !hasThunderforestKey;
-      opt.textContent = hasThunderforestKey ? 'Thunderforest Mobile Atlas' : 'Thunderforest Mobile Atlas - Disabled';
-      return;
-    }
     opt.disabled = !hasKey;
     if (opt.value === 'satellite') opt.textContent = hasKey ? 'Satellite Hybrid' : 'Satellite Hybrid (key required)';
     else if (opt.value === 'outdoor') opt.textContent = hasKey ? 'Outdoor' : 'Outdoor (key required)';
     else if (opt.value === 'topo') opt.textContent = hasKey ? 'Topo' : 'Topo (key required)';
   });
 
-  const current = els.basemapSelect.value;
+  const validModes = ['outdoor','satellite','topo','tf_outdoors','osm'];
+  const current = validModes.includes(els.basemapSelect.value)
+    ? els.basemapSelect.value
+    : (validModes.includes(model.mapStyleMode) ? model.mapStyleMode : (hasKey ? 'outdoor' : 'osm'));
   const wantsMapTiler = ['satellite','topo','outdoor'].includes(current);
-  const wantsThunderforest = ['tf_outdoors','tf_landscape','tf_mobile_atlas'].includes(current);
+  const wantsThunderforest = current === 'tf_outdoors';
   if ((wantsMapTiler && !hasKey) || (wantsThunderforest && !hasThunderforestKey)) {
     els.basemapSelect.value = 'osm';
     model.mapStyleMode = 'osm';
     localStorage.setItem(STORAGE_KEYS.basemap, 'osm');
+  } else if (els.basemapSelect.value !== current || model.mapStyleMode !== current) {
+    els.basemapSelect.value = current;
+    model.mapStyleMode = current;
+    localStorage.setItem(STORAGE_KEYS.basemap, current);
   }
 
   const terrainCapable = hasKey && ['satellite','topo','outdoor'].includes(els.basemapSelect.value);
   if (els.toggleTerrain) els.toggleTerrain.disabled = !terrainCapable;
   if (els.terrainExaggerationSlider) els.terrainExaggerationSlider.disabled = !terrainCapable;
-  if (els.togglePitch) els.togglePitch.disabled = !terrainCapable || !model.terrainEnabled;
+  if (els.togglePitch) els.togglePitch.disabled = !terrainCapable;
 }
 
 function setRotationInteractions() {
