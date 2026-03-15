@@ -14,6 +14,10 @@
 <body>
   <div id="appShell">
     <div id="map"></div>
+    <div id="loadingOverlay" class="loading-overlay" hidden>
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <div id="loadingText">Loading data…</div>
+    </div>
     <div id="zoomReadout" aria-live="polite">Zoom: --</div>
 
     <button id="menuToggle" aria-label="Menu" title="Map options">☰</button>
@@ -21,12 +25,12 @@
     <aside id="menuPanel" class="is-open">
       <div class="panel-header">
         <div>
-          <h1>Camping Map <span id="versionTag">v20.1</span></h1>
+          <h1>Camping Map <span id="versionTag">v20.2</span></h1>
           <p id="statusText">Loading map data…</p>
+          <p id="dataStats" class="note"></p>
         </div>
         <button id="closeMenu" class="ghost-button" aria-label="Close menu">✕</button>
       </div>
-
 
       <section class="panel-section">
         <h2>Find an area</h2>
@@ -35,22 +39,27 @@
           <input id="searchInput" type="text" placeholder="City, park, address, or lat, lng">
           <button id="searchBtn" class="ghost-button" type="button">Go</button>
         </div>
+        <div class="action-row compact-row">
+          <button id="resetViewBtn" class="ghost-button" type="button">Reset view</button>
+          <button id="locateBtn" class="ghost-button" type="button">My location</button>
+        </div>
         <p id="searchStatus" class="note" aria-live="polite"></p>
         <div id="searchResults" class="search-results" hidden></div>
       </section>
+
       <section class="panel-section">
         <h2>Basemap</h2>
         <label class="field-label" for="basemapSelect">Map style</label>
         <select id="basemapSelect">
           <option value="outdoor">Outdoor</option>
           <option value="satellite">Satellite</option>
+          <option value="topo">Topo</option>
           <option value="osm">OpenStreetMap fallback</option>
         </select>
         <label class="switch-row"><input type="checkbox" id="toggleTerrain"> 3D terrain</label>
         <label class="switch-row"><input type="checkbox" id="togglePitch"> Tilt camera when 3D is on</label>
       </section>
 
-      
       <section class="panel-section">
         <h2>Campsite layers</h2>
         <div id="layerToggleList" class="toggle-list"></div>
@@ -59,7 +68,7 @@
       <section class="panel-section">
         <h2>Add a site</h2>
         <label class="switch-row"><input type="checkbox" id="toggleAddMode"> Tap map to drop a draft pin</label>
-        <p class="note">Phone-friendly add mode: enable this and tap once, or long-press the map.</p>
+        <p class="note">Enable this and tap once, or long-press the map.</p>
       </section>
 
       <section class="panel-section" id="countsPanel">
@@ -76,7 +85,7 @@
 
       <section class="panel-section key-section" id="keySection">
         <h2>Map engine</h2>
-        <p class="note">Outdoor, Satellite, and 3D terrain need a MapTiler API key.</p>
+        <p class="note">Outdoor, Satellite, Topo, and 3D terrain need a MapTiler API key.</p>
         <label class="field-label" for="apiKeyInput">MapTiler API key</label>
         <div class="key-row">
           <input id="apiKeyInput" type="password" placeholder="Paste key here">
@@ -85,11 +94,15 @@
         </div>
       </section>
       <button id="revealKeySectionBtn" class="ghost-button" type="button" hidden>Map key saved — manage</button>
-
     </aside>
   </div>
 
   <script src="https://cdn.maptiler.com/maptiler-sdk-js/latest/maptiler-sdk.umd.min.js"></script>
-  <script src="app-v20.1.js"></script>
+  <script src="js/app-config-v20.2.js"></script>
+  <script src="js/app-data-v20.2.js"></script>
+  <script src="js/app-summaries-v20.2.js"></script>
+  <script src="js/app-basemap-v20.2.js"></script>
+  <script src="js/app-ui-v20.2.js"></script>
+  <script src="js/app-main-v20.2.js"></script>
 </body>
 </html>
