@@ -26,7 +26,7 @@
     <aside id="menuPanel" class="is-open">
       <div class="panel-header">
         <div>
-          <h1>Camping Map <span id="versionTag">v20.4.2</span></h1>
+          <h1>Camping Map <span id="versionTag">v20.4.3</span></h1>
           <p id="statusText">Loading map data…</p>
           <p id="dataStats" class="note"></p>
         </div>
@@ -71,6 +71,19 @@
         <p class="note">Enable this and tap once, or long-press the map.</p>
       </section>
 
+
+      <section class="panel-section">
+        <h2>Manual site queue</h2>
+        <p class="note">Use Add a site, tap the map, fill in the details, and append records here for later coding.</p>
+        <textarea id="draftQueueText" name="draftQueueText" class="draft-queue-text" rows="8" readonly placeholder="Draft site records will collect here..."></textarea>
+        <div class="search-row">
+          <button id="copyDraftQueueBtn" class="ghost-button" type="button">Copy queue</button>
+          <button id="downloadDraftQueueBtn" class="ghost-button" type="button">Download .txt</button>
+          <button id="clearDraftQueueBtn" class="ghost-button" type="button">Clear queue</button>
+        </div>
+        <p id="draftQueueStatus" class="note" aria-live="polite"></p>
+      </section>
+
       <section class="panel-section" id="countsPanel">
         <h2>Visible counts</h2>
         <div id="countsGrid" class="counts-grid"></div>
@@ -107,11 +120,11 @@
   </div>
 
   <script src="https://cdn.maptiler.com/maptiler-sdk-js/latest/maptiler-sdk.umd.min.js"></script>
-  <script src="js/app-config-v20.4.2.js"></script>
-  <script src="js/app-data-v20.4.2.js"></script>
-  <script src="js/app-summaries-v20.4.2.js"></script>
-  <script src="js/app-basemap-v20.4.2.js"></script>
-  <script src="js/app-ui-v20.4.2.js"></script>
-  <script src="js/app-main-v20.4.2.js"></script>
+  <script src="js/app-config.js"></script>
+  <script src="js/app-data.js"></script>
+  <script src="js/app-summaries.js"></script>
+  <script src="js/app-basemap.js"></script>
+  <script src="js/app-ui.js"></script>
+  <script src="js/app-main.js"></script>
 </body>
 </html>

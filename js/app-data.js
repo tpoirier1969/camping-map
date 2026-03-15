@@ -6,6 +6,16 @@ function getSavedThunderforestKey() {
   return (localStorage.getItem(STORAGE_KEYS.thunderforestApiKey) || DEFAULT_API_KEYS.thunderforest || '').trim();
 }
 
+function loadManualDraftQueue() {
+  const raw = (localStorage.getItem(STORAGE_KEYS.manualDraftQueue) || '').trim();
+  if (!raw) return [];
+  return raw.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+}
+
+function saveManualDraftQueue() {
+  localStorage.setItem(STORAGE_KEYS.manualDraftQueue, model.manualDraftQueue.join('\n'));
+}
+
 
 function ensureBasemapOptions() {
   if (!els.basemapSelect) return;

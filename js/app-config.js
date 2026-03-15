@@ -1,4 +1,4 @@
-const VERSION = 'v20.4.2';
+const VERSION = 'v20.4.3';
 const DEFAULT_API_KEYS = {
   maptiler: '3jVO6TokbQhyTqtAmF8G',
   thunderforest: 'c0ceacbdeb224697bdedd71af8b20abd'
@@ -22,7 +22,8 @@ const STORAGE_KEYS = {
   basemap: 'campingMap.basemap',
   terrain: 'campingMap.terrain',
   tilt: 'campingMap.pitch',
-  thunderforestApiKey: 'campingMap.thunderforestApiKey'
+  thunderforestApiKey: 'campingMap.thunderforestApiKey',
+  manualDraftQueue: 'campingMap.manualDraftQueue'
 };
 const STATE_CENTERS = {
   MI: [-85.55, 44.65],
@@ -135,7 +136,12 @@ const els = {
   searchResults: document.getElementById('searchResults'),
   loadingOverlay: document.getElementById('loadingOverlay'),
   loadingText: document.getElementById('loadingText'),
-  dataStats: document.getElementById('dataStats')
+  dataStats: document.getElementById('dataStats'),
+  draftQueueText: document.getElementById('draftQueueText'),
+  draftQueueStatus: document.getElementById('draftQueueStatus'),
+  copyDraftQueueBtn: document.getElementById('copyDraftQueueBtn'),
+  downloadDraftQueueBtn: document.getElementById('downloadDraftQueueBtn'),
+  clearDraftQueueBtn: document.getElementById('clearDraftQueueBtn')
 };
 els.versionTag.textContent = VERSION;
 if (els.toggleStateSummaries) els.toggleStateSummaries.checked = true;
@@ -179,5 +185,6 @@ const model = {
   styleSequence: 0,
   popupHandlersBound: false,
   cursorHandlersBound: false,
-  activePopup: null
+  activePopup: null,
+  manualDraftQueue: []
 };

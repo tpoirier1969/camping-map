@@ -1,3 +1,47 @@
+
+function setDraftQueueStatus(message = '') {
+  if (els.draftQueueStatus) els.draftQueueStatus.textContent = message;
+}
+
+function refreshDraftQueueUi(statusMessage = '') {
+  if (els.draftQueueText) els.draftQueueText.value = model.manualDraftQueue.join('\n');
+  if (statusMessage) setDraftQueueStatus(statusMessage);
+  else setDraftQueueStatus(model.manualDraftQueue.length ? `${model.manualDraftQueue.length} draft record${model.manualDraftQueue.length === 1 ? '' : 's'} queued.` : 'No draft records queued yet.');
+}
+
+async function copyDraftQueue() {
+  const text = model.manualDraftQueue.join('\n');
+  if (!text) { refreshDraftQueueUi('Nothing to copy yet.'); return; }
+  try {
+    await navigator.clipboard.writeText(text);
+    refreshDraftQueueUi('Draft queue copied.');
+  } catch (error) {
+    console.error(error);
+    refreshDraftQueueUi('Copy failed on this device.');
+  }
+}
+
+function downloadDraftQueue() {
+  const text = model.manualDraftQueue.join('\n');
+  if (!text) { refreshDraftQueueUi('Nothing to download yet.'); return; }
+  const blob = new Blob([text + '\n'], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `camping-site-draft-queue-${new Date().toISOString().slice(0,10)}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  refreshDraftQueueUi('Draft queue downloaded.');
+}
+
+function clearDraftQueue() {
+  model.manualDraftQueue = [];
+  saveManualDraftQueue();
+  refreshDraftQueueUi('Draft queue cleared.');
+}
+
 function setLoadingState(isLoading, message = 'Loading data…') {
   if (els.loadingOverlay) els.loadingOverlay.hidden = !isLoading;
   if (els.loadingText && message) els.loadingText.textContent = message;
@@ -176,6 +220,8 @@ function refreshStatusText() {
 
 function bindUi() {
   ensureBasemapOptions();
+  model.manualDraftQueue = loadManualDraftQueue();
+  refreshDraftQueueUi();
   els.menuToggle?.addEventListener('click', () => els.menuPanel.classList.toggle('is-collapsed'));
   els.closeMenu?.addEventListener('click', () => els.menuPanel.classList.add('is-collapsed'));
   els.manageApisBtn?.addEventListener('click', () => {
@@ -247,6 +293,9 @@ function bindUi() {
     refreshStatusText();
     closeApiModal();
   });
+  els.copyDraftQueueBtn?.addEventListener('click', copyDraftQueue);
+  els.downloadDraftQueueBtn?.addEventListener('click', downloadDraftQueue);
+  els.clearDraftQueueBtn?.addEventListener('click', clearDraftQueue);
 }
 
 function updateZoomReadout() {
