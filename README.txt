@@ -22,8 +22,14 @@ Active files:
 - js/app-main.js
 - data/sites.json
 
+2026-03-15 v20.5.0
+- Restored boondocking zones instead of leaving them removed.
+- Replaced the fake hand-drawn boondocking zone file with live ownership-based public-land queries:
+  - Ottawa National Forest Basic Ownership (USFS ArcGIS service)
+  - Chequamegon-Nicolet National Forest ownership (Wisconsin DNR ArcGIS service)
+- Zones now follow official public-land ownership polygons instead of one broad blob crossing private land.
+- 3D exaggeration slider still ranges from 1.00x to 3.00x.
 
-v20.4.5 adds a 3D exaggeration slider in the Basemap section (1.00x to 2.00x).
-
-
-v20.4.6 adds a broad boondocking-zones layer, Thunderforest Mobile Atlas, west-end Ontonagon-to-Wisconsin-border campsite additions, and larger tap targets with updated federal/state/local symbols.
+Important note:
+- These zones are now ownership-accurate public-land overlays for the west-end federal forests.
+- They are not a promise that every square foot inside the polygon is camp-ready; users still need to obey site-specific closures, setbacks, posted restrictions, and motor-vehicle rules.

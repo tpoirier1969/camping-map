@@ -26,7 +26,7 @@
     <aside id="menuPanel" class="is-open">
       <div class="panel-header">
         <div>
-          <h1>Camping Map <span id="versionTag">v20.4.8</span></h1>
+          <h1>Camping Map <span id="versionTag">v20.4.9</span></h1>
           <p id="statusText">Loading map data…</p>
           <p id="dataStats" class="note"></p>
         </div>
@@ -57,14 +57,13 @@
         <label class="switch-row"><input type="checkbox" id="toggleTerrain"> 3D terrain</label>
         <div class="terrain-control-box">
           <label class="field-label" for="terrainExaggerationSlider">3D exaggeration <span id="terrainExaggerationValue">1.50×</span></label>
-          <input id="terrainExaggerationSlider" name="terrainExaggeration" type="range" min="1" max="2" step="0.05" value="1.5">
+          <input id="terrainExaggerationSlider" name="terrainExaggeration" type="range" min="1" max="3" step="0.05" value="1.5">
         </div>
         <label class="switch-row"><input type="checkbox" id="togglePitch"> Tilt camera when 3D is on</label>
       </section>
 
       <section class="panel-section">
         <h2>Campsite layers</h2>
-        <label class="switch-row"><input type="checkbox" id="toggleBoondockingZones" checked> Show boondocking zones</label>
         <div id="layerToggleList" class="toggle-list"></div>
       </section>
 

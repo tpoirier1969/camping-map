@@ -1,4 +1,4 @@
-const VERSION = 'v20.4.8';
+const VERSION = 'v20.5.0';
 const DEFAULT_API_KEYS = {
   maptiler: '3jVO6TokbQhyTqtAmF8G',
   thunderforest: 'c0ceacbdeb224697bdedd71af8b20abd'
@@ -7,7 +7,20 @@ const SITE_DATA_URLS = ['data/sites.json'];
 const EXTRA_SITE_DATA_URLS = [];
 const TRAIL_GEOJSON_URLS = [];
 const TRAIL_VECTOR_MANIFEST_URLS = [];
-const BOONDOCKING_ZONE_URLS = ['data/boondocking-zones.geojson'];
+const BOONDOCKING_ZONE_SOURCES = [
+  {
+    key: 'ottawa_nf',
+    label: 'Ottawa National Forest ownership',
+    zoneLabel: 'Ottawa National Forest public land',
+    url: "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_BasicOwnership_01/MapServer/0/query?where=OWNERCLASSIFICATION%20%3D%20%27USDA%20FOREST%20SERVICE%27%20AND%20FORESTNAME%20%3D%20%27Ottawa%20National%20Forest%27&outFields=OBJECTID%2CFORESTNAME%2COWNERCLASSIFICATION&returnGeometry=true&outSR=4326&f=geojson"
+  },
+  {
+    key: 'chequamegon_nicolet_nf',
+    label: 'Chequamegon-Nicolet National Forest ownership',
+    zoneLabel: 'Chequamegon-Nicolet National Forest public land',
+    url: "https://dnrmaps.wi.gov/arcgis/rest/services/LF_DML/AGOL_LF_DNR_PUBLIC_LAND_WTM_Ext/MapServer/4/query?where=1%3D1&outFields=OBJECTID%2CNAME1%2CNAME_ORIG&returnGeometry=true&outSR=4326&f=geojson"
+  }
+];
 const DEFAULT_CENTER = [-87.4, 46.6];
 const DEFAULT_ZOOM = 6;
 const DETAIL_ZOOM = 6.2;
@@ -167,7 +180,7 @@ const model = {
   styleReady: false,
   mapStyleMode: localStorage.getItem(STORAGE_KEYS.basemap) || 'outdoor',
   terrainEnabled: localStorage.getItem(STORAGE_KEYS.terrain) === 'true',
-  terrainExaggeration: (() => { const raw = Number(localStorage.getItem(STORAGE_KEYS.terrainExaggeration)); return Number.isFinite(raw) && raw >= 1 && raw <= 2 ? raw : 1.5; })(),
+  terrainExaggeration: (() => { const raw = Number(localStorage.getItem(STORAGE_KEYS.terrainExaggeration)); return Number.isFinite(raw) && raw >= 1 && raw <= 3 ? raw : 1.5; })(),
   tiltEnabled: localStorage.getItem(STORAGE_KEYS.tilt) === 'true',
   draftFeature: null,
   domMarkers: [],
@@ -193,5 +206,6 @@ const model = {
   cursorHandlersBound: false,
   activePopup: null,
   manualDraftQueue: [],
-  boondockingZones: null
+  boondockingZones: null,
+  boondockingZonesRaw: null
 };

@@ -712,11 +712,58 @@ function normalizeFeatureCollection(raw) {
   return { type: 'FeatureCollection', features: [] };
 }
 
-async function loadBoondockingZoneData() {
-  const zonesRaw = await loadFirstAvailable(BOONDOCKING_ZONE_URLS, 'boondockingZones');
-  model.boondockingZones = normalizeFeatureCollection(zonesRaw);
+function normalizeBoondockingZoneFeatures(raw) {
+  const fc = normalizeFeatureCollection(raw);
+  const features = fc.features
+    .filter((feature) => feature?.geometry && ['Polygon', 'MultiPolygon'].includes(feature.geometry.type))
+    .map((feature, index) => ({
+      type: 'Feature',
+      properties: { ...(feature.properties || {}), zoneId: feature.properties?.zoneId || `zone-${index + 1}` },
+      geometry: feature.geometry
+    }));
+  return { type: 'FeatureCollection', features };
+}
+
+function tagBoondockingZoneFeatures(raw, source) {
+  const fc = normalizeFeatureCollection(raw);
+  return {
+    type: 'FeatureCollection',
+    features: (fc.features || []).map((feature, index) => ({
+      type: 'Feature',
+      properties: {
+        ...(feature.properties || {}),
+        zoneSourceKey: source.key,
+        zoneSourceLabel: source.label,
+        zoneLabel: source.zoneLabel,
+        zoneId: `${source.key}-${index + 1}`
+      },
+      geometry: feature.geometry
+    }))
+  };
+}
+
+function rebuildBoondockingZonesFromRaw() {
+  model.boondockingZones = normalizeBoondockingZoneFeatures(model.boondockingZonesRaw);
   if (model.map && model.styleReady) updateOverlays();
   return model.boondockingZones;
+}
+
+async function loadBoondockingZoneData() {
+  const attempts = [];
+  const loadedFeatures = [];
+  for (const source of BOONDOCKING_ZONE_SOURCES) {
+    const result = await fetchJsonWithTimeout(source.url, 12000);
+    attempts.push({ url: source.url, ok: result.ok, status: result.status, reason: result.reason || '', label: source.label });
+    if (result.ok) {
+      const tagged = tagBoondockingZoneFeatures(result.json, source);
+      loadedFeatures.push(...tagged.features);
+    } else {
+      console.warn('Boondocking zone source failed', source.label, result.reason || result.status);
+    }
+  }
+  model.dataLoad.boondockingZonesAttempted = attempts;
+  model.boondockingZonesRaw = { type: 'FeatureCollection', features: loadedFeatures };
+  return rebuildBoondockingZonesFromRaw();
 }
 
 async function loadAllAvailableSiteArrays(urls, target = 'siteExtras') {
@@ -763,6 +810,7 @@ async function loadData() {
 
   const baseSitesRaw = normalizeSiteArray(sitesRaw);
   model.sites = baseSitesRaw.map(normalizeSite).filter(Boolean);
+  rebuildBoondockingZonesFromRaw();
 
   buildLayerDefinitions();
   buildStateGroups();
@@ -785,6 +833,7 @@ async function loadData() {
         ...extraSiteArrays.flatMap((entry) => normalizeSiteArray(entry.json))
       ];
       model.sites = mergedSitesRaw.map(normalizeSite).filter(Boolean);
+      rebuildBoondockingZonesFromRaw();
       model.dataLoad.loadingSiteExtras = false;
       buildLayerDefinitions();
       buildStateGroups();
