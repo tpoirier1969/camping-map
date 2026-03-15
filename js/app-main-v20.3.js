@@ -85,6 +85,14 @@ function moveOverlayLayersToTop() {
   }
 }
 
+
+function styleSupportsTextLayers() {
+  const style = model.map?.getStyle?.();
+  if (!style) return false;
+  if (style.glyphs) return true;
+  return (style.layers || []).some((layer) => layer.type === 'symbol' && layer.layout && layer.layout['text-field']);
+}
+
 function firstLabelLayerId() {
   const layers = model.map.getStyle()?.layers || [];
   const label = layers.find((layer) => layer.type === 'symbol' && layer.layout && layer.layout['text-field']);
@@ -111,11 +119,13 @@ function applyOverlaySourcesAndLayers() {
     }
   }, beforeId);
 
-  addLayerIfMissing({
-    id: 'state-summary-labels', type: 'symbol', source: 'state-summaries',
-    layout: { 'text-field': ['get', 'summaryLabel'], 'text-size': 11.5, 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'], 'text-offset': [0, 0], 'text-justify': 'center', 'text-anchor': 'center', 'text-line-height': 1.15 },
-    paint: { 'text-color': '#ffffff', 'text-halo-color': 'rgba(0,0,0,0.85)', 'text-halo-width': 1.8 }
-  }, beforeId);
+  if (styleSupportsTextLayers()) {
+    addLayerIfMissing({
+      id: 'state-summary-labels', type: 'symbol', source: 'state-summaries',
+      layout: { 'text-field': ['get', 'summaryLabel'], 'text-size': 11.5, 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'], 'text-offset': [0, 0], 'text-justify': 'center', 'text-anchor': 'center', 'text-line-height': 1.15 },
+      paint: { 'text-color': '#ffffff', 'text-halo-color': 'rgba(0,0,0,0.85)', 'text-halo-width': 1.8 }
+    }, beforeId);
+  }
 
   addLayerIfMissing({
     id: 'sites-circles', type: 'circle', source: 'sites',
@@ -272,25 +282,35 @@ function initMap() {
 
   model.map.on('style.load', () => {
     model.styleReady = true;
-    if (model.hasApiKey && model.terrainEnabled && model.mapStyleMode !== 'osm') {
-      try { model.map.enableTerrain(); } catch {}
+    try {
+      if (model.hasApiKey && model.terrainEnabled && ['satellite','topo','outdoor'].includes(model.mapStyleMode)) {
+        try { model.map.enableTerrain(); } catch {}
+      }
+      applyOverlaySourcesAndLayers();
+      attachPopupHandlers();
+      attachCursorStates();
+      setRotationInteractions();
+      applyPitch();
+      updateOverlays();
+      scheduleMarkerRefresh();
+      refreshBasemapUiState();
+      refreshStatusText();
+      updateZoomReadout();
+    } catch (error) {
+      console.error('Overlay setup failed', error);
+      if (els.statusText) els.statusText.textContent = 'Map style loaded, but an overlay step failed. The map should still be usable.';
+    } finally {
+      setLoadingState(false);
     }
-    applyOverlaySourcesAndLayers();
-    attachPopupHandlers();
-    attachCursorStates();
-    setRotationInteractions();
-    applyPitch();
-    updateOverlays();
-    scheduleMarkerRefresh();
-    refreshBasemapUiState();
-    refreshStatusText();
-    updateZoomReadout();
-    setLoadingState(false);
   });
   model.map.on('moveend', () => { updateZoomReadout(); updateOverlays(); });
   model.map.on('zoom', updateZoomReadout);
   model.map.on('zoomend', () => { updateZoomReadout(); updateOverlays(); });
   model.map.on('idle', () => { updateZoomReadout(); if (shouldShowSiteDetails()) renderDirectSiteMarkers(); });
+  model.map.on('error', (event) => {
+    console.error('Map error', event?.error || event);
+    setLoadingState(false);
+  });
 
   model.map.on('click', (event) => {
     if (!model.addMode) return;

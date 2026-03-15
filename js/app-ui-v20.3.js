@@ -107,15 +107,17 @@ async function runAreaSearch() {
 
 function setApiKeyUi() {
   const key = getSavedApiKey();
+  const thunderforestKey = getSavedThunderforestKey();
   if (els.apiKeyInput) els.apiKeyInput.value = key;
+  if (els.tfApiKeyInput) els.tfApiKeyInput.value = thunderforestKey;
   model.hasApiKey = Boolean(key);
   if (els.keySection) {
     els.keySection.hidden = false;
-    els.keySection.classList.toggle('is-collapsed', model.hasApiKey);
+    els.keySection.classList.toggle('is-collapsed', model.hasApiKey || Boolean(thunderforestKey));
   }
   if (els.revealKeySectionBtn) {
-    els.revealKeySectionBtn.hidden = !model.hasApiKey;
-    els.revealKeySectionBtn.textContent = model.hasApiKey ? 'Map key saved — manage' : 'Map key';
+    els.revealKeySectionBtn.hidden = !(model.hasApiKey || Boolean(thunderforestKey));
+    els.revealKeySectionBtn.textContent = (model.hasApiKey || Boolean(thunderforestKey)) ? 'Map keys saved — manage' : 'Map keys';
   }
   refreshBasemapUiState();
 }
@@ -134,16 +136,24 @@ function refreshStatusText() {
       : `No campsite records loaded. Tried: ${describeAttempts(model.dataLoad.sitesAttempted)}`;
 
   const basemapLabel = model.mapStyleMode === 'satellite'
-    ? 'Satellite'
+    ? 'Satellite Hybrid'
     : model.mapStyleMode === 'topo'
       ? 'Topo'
       : model.mapStyleMode === 'outdoor'
         ? 'Outdoor'
-        : 'OSM fallback';
+        : model.mapStyleMode === 'tf_outdoors'
+          ? 'Thunderforest Outdoors'
+          : model.mapStyleMode === 'tf_landscape'
+            ? 'Thunderforest Landscape'
+            : 'OSM fallback';
 
-  const mapMsg = model.hasApiKey
+  const usingMapTiler = ['satellite', 'topo', 'outdoor'].includes(model.mapStyleMode);
+  const usingThunderforest = ['tf_outdoors', 'tf_landscape'].includes(model.mapStyleMode);
+  const mapMsg = usingMapTiler && model.hasApiKey
     ? ` Basemap: ${basemapLabel}${model.terrainEnabled ? ' with 3D terrain' : ''}${model.tiltEnabled ? ' and tilt' : ''}.`
-    : ' Using OpenStreetMap fallback until you add a MapTiler API key.';
+    : usingThunderforest && getSavedThunderforestKey()
+      ? ` Basemap: ${basemapLabel}.`
+      : ' Using OpenStreetMap fallback until you add a matching basemap API key.';
 
   if (els.statusText) els.statusText.textContent = `${siteMsg}${mapMsg}`;
   if (els.dataStats) {
@@ -175,7 +185,7 @@ function bindUi() {
   els.toggleSitePoints?.addEventListener('change', updateOverlays);
   els.toggleAddMode?.addEventListener('change', () => { model.addMode = els.toggleAddMode.checked; });
 
-  els.basemapSelect.value = ['outdoor','satellite','topo','osm'].includes(model.mapStyleMode) ? model.mapStyleMode : 'outdoor';
+  els.basemapSelect.value = ['outdoor','satellite','topo','tf_outdoors','tf_landscape','osm'].includes(model.mapStyleMode) ? model.mapStyleMode : 'outdoor';
   refreshBasemapUiState();
   els.basemapSelect?.addEventListener('change', async () => {
     model.mapStyleMode = els.basemapSelect.value;
@@ -206,6 +216,18 @@ function bindUi() {
   });
   els.clearKeyBtn?.addEventListener('click', async () => {
     localStorage.removeItem(STORAGE_KEYS.apiKey);
+    setApiKeyUi();
+    refreshStatusText();
+    await rebuildMapStyle();
+  });
+  els.saveTfKeyBtn?.addEventListener('click', async () => {
+    localStorage.setItem(STORAGE_KEYS.thunderforestApiKey, (els.tfApiKeyInput?.value || '').trim());
+    setApiKeyUi();
+    refreshStatusText();
+    await rebuildMapStyle();
+  });
+  els.clearTfKeyBtn?.addEventListener('click', async () => {
+    localStorage.removeItem(STORAGE_KEYS.thunderforestApiKey);
     setApiKeyUi();
     refreshStatusText();
     await rebuildMapStyle();

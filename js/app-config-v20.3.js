@@ -1,4 +1,4 @@
-const VERSION = 'v20.3.3';
+const VERSION = 'v20.3.4';
 const SITE_DATA_URLS = ['data/sites.json', 'data/site-data.json', 'data/campgrounds.json', 'sites.json'];
 const EXTRA_SITE_DATA_URLS = ['data/sites-additions-v18.5.json', 'data/sites-additions-v18.7.json', 'data/sites-additions-v18.8.json', 'data/sites-additions-v18.9.json', 'data/sites-additions-v19.0.json', 'data/sites-additions-v20.3.json'];
 const TRAIL_GEOJSON_URLS = [];
@@ -17,7 +17,8 @@ const STORAGE_KEYS = {
   apiKey: 'campingMap.maptilerApiKey',
   basemap: 'campingMap.basemap',
   terrain: 'campingMap.terrain',
-  tilt: 'campingMap.pitch'
+  tilt: 'campingMap.pitch',
+  thunderforestApiKey: 'campingMap.thunderforestApiKey'
 };
 const STATE_CENTERS = {
   MI: [-85.55, 44.65],
@@ -110,6 +111,9 @@ const els = {
   apiKeyInput: document.getElementById('apiKeyInput'),
   saveKeyBtn: document.getElementById('saveKeyBtn'),
   clearKeyBtn: document.getElementById('clearKeyBtn'),
+  tfApiKeyInput: document.getElementById('tfApiKeyInput'),
+  saveTfKeyBtn: document.getElementById('saveTfKeyBtn'),
+  clearTfKeyBtn: document.getElementById('clearTfKeyBtn'),
   keySection: document.getElementById('keySection'),
   revealKeySectionBtn: document.getElementById('revealKeySectionBtn'),
   basemapSelect: document.getElementById('basemapSelect'),

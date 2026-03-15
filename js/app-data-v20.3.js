@@ -2,13 +2,19 @@ function getSavedApiKey() {
   return (localStorage.getItem(STORAGE_KEYS.apiKey) || '').trim();
 }
 
+function getSavedThunderforestKey() {
+  return (localStorage.getItem(STORAGE_KEYS.thunderforestApiKey) || '').trim();
+}
+
 
 function ensureBasemapOptions() {
   if (!els.basemapSelect) return;
   const wanted = [
     ['outdoor', 'Outdoor'],
-    ['satellite', 'Satellite'],
+    ['satellite', 'Satellite Hybrid'],
     ['topo', 'Topo'],
+    ['tf_outdoors', 'Thunderforest Outdoors - Disabled'],
+    ['tf_landscape', 'Thunderforest Landscape - Disabled'],
     ['osm', 'OpenStreetMap fallback']
   ];
   for (const [value, label] of wanted) {
@@ -671,10 +677,10 @@ function normalizeSiteArray(sitesRaw) {
 }
 
 async function loadAllAvailableSiteArrays(urls, target = 'siteExtras') {
+  const results = await Promise.all(urls.map((url) => fetchJsonWithTimeout(url, 3500)));
   const loaded = [];
   const attempts = [];
-  for (const url of urls) {
-    const result = await fetchJsonWithTimeout(url, 3500);
+  for (const result of results) {
     attempts.push({ url: result.url, ok: result.ok, status: result.status, reason: result.reason || '' });
     if (result.ok) loaded.push({ url: result.url, json: result.json });
   }

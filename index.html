@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#133b2c">
   <title>Camping Map</title>
@@ -36,7 +37,7 @@
         <h2>Find an area</h2>
         <label class="field-label" for="searchInput">Search place or coordinates</label>
         <div class="search-row">
-          <input id="searchInput" type="text" placeholder="City, park, address, or lat, lng">
+          <input id="searchInput" name="search" type="text" placeholder="City, park, address, or lat, lng">
           <button id="searchBtn" class="ghost-button" type="button">Go</button>
         </div>
 <p id="searchStatus" class="note" aria-live="polite"></p>
@@ -46,10 +47,12 @@
       <section class="panel-section">
         <h2>Basemap</h2>
         <label class="field-label" for="basemapSelect">Map style</label>
-        <select id="basemapSelect">
+        <select id="basemapSelect" name="basemap">
           <option value="outdoor">Outdoor</option>
-          <option value="satellite">Satellite</option>
+          <option value="satellite">Satellite Hybrid</option>
           <option value="topo">Topo</option>
+          <option value="tf_outdoors">Thunderforest Outdoors - Disabled</option>
+          <option value="tf_landscape">Thunderforest Landscape - Disabled</option>
           <option value="osm">OpenStreetMap fallback</option>
         </select>
         <label class="switch-row"><input type="checkbox" id="toggleTerrain"> 3D terrain</label>
@@ -81,12 +84,18 @@
 
       <section class="panel-section key-section" id="keySection">
         <h2>Map engine</h2>
-        <p class="note">Outdoor, Satellite, Topo, and 3D terrain need a MapTiler API key.</p>
+        <p class="note">MapTiler powers Outdoor, Satellite Hybrid, Topo and 3D terrain. Thunderforest uses its own separate API key.</p>
         <label class="field-label" for="apiKeyInput">MapTiler API key</label>
         <div class="key-row">
-          <input id="apiKeyInput" type="password" placeholder="Paste key here">
+          <input id="apiKeyInput" name="maptilerApiKey" type="password" placeholder="Paste key here" autocomplete="off">
           <button id="saveKeyBtn" class="ghost-button" type="button">Save</button>
           <button id="clearKeyBtn" class="ghost-button" type="button">Clear</button>
+        </div>
+        <label class="field-label" for="tfApiKeyInput">Thunderforest API key (optional)</label>
+        <div class="key-row">
+          <input id="tfApiKeyInput" name="thunderforestApiKey" type="password" placeholder="Paste Thunderforest key here" autocomplete="off">
+          <button id="saveTfKeyBtn" class="ghost-button" type="button">Save</button>
+          <button id="clearTfKeyBtn" class="ghost-button" type="button">Clear</button>
         </div>
       </section>
       <button id="revealKeySectionBtn" class="ghost-button" type="button" hidden>Map key saved — manage</button>

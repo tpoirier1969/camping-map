@@ -4,12 +4,24 @@ function buildMapTilerStyleUrl(styleId) {
   return `https://api.maptiler.com/maps/${styleId}/style.json?key=${encodeURIComponent(key)}`;
 }
 
-function mapStyleForMode() {
-  if (model.hasApiKey) {
-    if (model.mapStyleMode === 'satellite') return buildMapTilerStyleUrl('satellite');
-    if (model.mapStyleMode === 'topo') return buildMapTilerStyleUrl('topo-v2');
-    if (model.mapStyleMode === 'outdoor') return buildMapTilerStyleUrl('outdoor-v2');
-  }
+function buildThunderforestRasterStyle(styleId) {
+  const key = getSavedThunderforestKey();
+  if (!key) return null;
+  return {
+    version: 8,
+    sources: {
+      thunderforest: {
+        type: 'raster',
+        tiles: [`https://tile.thunderforest.com/${styleId}/{z}/{x}/{y}.png?apikey=${encodeURIComponent(key)}`],
+        tileSize: 256,
+        attribution: '&copy; Thunderforest, &copy; OpenStreetMap contributors'
+      }
+    },
+    layers: [{ id: `tf-${styleId}`, type: 'raster', source: 'thunderforest' }]
+  };
+}
+
+function buildOsmFallbackStyle() {
   return {
     version: 8,
     sources: {
@@ -19,27 +31,57 @@ function mapStyleForMode() {
   };
 }
 
+function mapStyleForMode() {
+  if (model.hasApiKey) {
+    if (model.mapStyleMode === 'satellite') return buildMapTilerStyleUrl('hybrid');
+    if (model.mapStyleMode === 'topo') return buildMapTilerStyleUrl('topo-v2');
+    if (model.mapStyleMode === 'outdoor') return buildMapTilerStyleUrl('outdoor-v2');
+  }
+  if (model.mapStyleMode === 'tf_outdoors') return buildThunderforestRasterStyle('outdoors') || buildOsmFallbackStyle();
+  if (model.mapStyleMode === 'tf_landscape') return buildThunderforestRasterStyle('landscape') || buildOsmFallbackStyle();
+  return buildOsmFallbackStyle();
+}
+
 function refreshBasemapUiState() {
   if (!els.basemapSelect) return;
   const hasKey = Boolean(getSavedApiKey());
+  const hasThunderforestKey = Boolean(getSavedThunderforestKey());
   model.hasApiKey = hasKey;
+
   [...els.basemapSelect.options].forEach((opt) => {
     if (opt.value === 'osm') {
       opt.disabled = false;
       opt.textContent = 'OpenStreetMap fallback';
       return;
     }
+    if (opt.value === 'tf_outdoors') {
+      opt.disabled = !hasThunderforestKey;
+      opt.textContent = hasThunderforestKey ? 'Thunderforest Outdoors' : 'Thunderforest Outdoors - Disabled';
+      return;
+    }
+    if (opt.value === 'tf_landscape') {
+      opt.disabled = !hasThunderforestKey;
+      opt.textContent = hasThunderforestKey ? 'Thunderforest Landscape' : 'Thunderforest Landscape - Disabled';
+      return;
+    }
     opt.disabled = !hasKey;
-    const plain = opt.textContent.replace(/ \(key required\)$/,'').replace(/ \(unavailable\)$/,'');
-    opt.textContent = hasKey ? plain : `${plain} (key required)`;
+    if (opt.value === 'satellite') opt.textContent = hasKey ? 'Satellite Hybrid' : 'Satellite Hybrid (key required)';
+    else if (opt.value === 'outdoor') opt.textContent = hasKey ? 'Outdoor' : 'Outdoor (key required)';
+    else if (opt.value === 'topo') opt.textContent = hasKey ? 'Topo' : 'Topo (key required)';
   });
-  if (!hasKey && els.basemapSelect.value !== 'osm') {
+
+  const current = els.basemapSelect.value;
+  const wantsMapTiler = ['satellite','topo','outdoor'].includes(current);
+  const wantsThunderforest = ['tf_outdoors','tf_landscape'].includes(current);
+  if ((wantsMapTiler && !hasKey) || (wantsThunderforest && !hasThunderforestKey)) {
     els.basemapSelect.value = 'osm';
     model.mapStyleMode = 'osm';
     localStorage.setItem(STORAGE_KEYS.basemap, 'osm');
   }
-  if (els.toggleTerrain) els.toggleTerrain.disabled = !hasKey || els.basemapSelect.value === 'osm';
-  if (els.togglePitch) els.togglePitch.disabled = !hasKey || !model.terrainEnabled || els.basemapSelect.value === 'osm';
+
+  const terrainCapable = hasKey && ['satellite','topo','outdoor'].includes(els.basemapSelect.value);
+  if (els.toggleTerrain) els.toggleTerrain.disabled = !terrainCapable;
+  if (els.togglePitch) els.togglePitch.disabled = !terrainCapable || !model.terrainEnabled;
 }
 
 function setRotationInteractions() {
@@ -52,7 +94,7 @@ function setRotationInteractions() {
 
 function applyPitch() {
   if (!model.map) return;
-  const wants3dView = model.hasApiKey && model.terrainEnabled && model.tiltEnabled && model.mapStyleMode !== 'osm';
+  const wants3dView = model.hasApiKey && model.terrainEnabled && model.tiltEnabled && ['satellite','topo','outdoor'].includes(model.mapStyleMode);
   const currentBearing = Number.isFinite(model.map.getBearing?.()) ? model.map.getBearing() : 0;
   model.map.easeTo({ pitch: wants3dView ? 65 : 0, bearing: currentBearing, duration: 400 });
   setRotationInteractions();
@@ -79,19 +121,25 @@ async function rebuildMapStyle() {
   model.map.setStyle(mapStyleForMode());
   model.map.once('style.load', () => {
     model.styleReady = true;
-    if (model.hasApiKey && model.terrainEnabled && model.mapStyleMode !== 'osm') {
-      try { model.map.enableTerrain(); } catch {}
+    try {
+      if (model.hasApiKey && model.terrainEnabled && ['satellite','topo','outdoor'].includes(model.mapStyleMode)) {
+        try { model.map.enableTerrain(); } catch {}
+      }
+      applyOverlaySourcesAndLayers();
+      attachPopupHandlers();
+      model.map.jumpTo({ center, zoom, pitch, bearing });
+      setRotationInteractions();
+      applyPitch();
+      updateOverlays();
+      scheduleMarkerRefresh();
+      refreshBasemapUiState();
+      refreshStatusText();
+      updateZoomReadout();
+    } catch (error) {
+      console.error('Rebuild overlay setup failed', error);
+      if (els.statusText) els.statusText.textContent = 'Basemap changed, but an overlay step failed. The map should still be usable.';
+    } finally {
+      setLoadingState(false);
     }
-    applyOverlaySourcesAndLayers();
-    attachPopupHandlers();
-    model.map.jumpTo({ center, zoom, pitch, bearing });
-    setRotationInteractions();
-    applyPitch();
-    updateOverlays();
-    scheduleMarkerRefresh();
-    refreshBasemapUiState();
-    refreshStatusText();
-    updateZoomReadout();
-    setLoadingState(false);
   });
 }

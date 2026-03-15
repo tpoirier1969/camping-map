@@ -3725,7 +3725,7 @@
     "sourceFolder": "State, county, and town Campgrounds",
     "lat": 45.71202556630997,
     "lng": -86.66693614833193,
-    "description": "",
+    "description": "Official Michigan state park campground page added.",
     "website": "https://www.michigan.gov/recsearch/parks/fayette"
   },
   {
@@ -4000,7 +4000,7 @@
     "sourceFolder": "State, county, and town Campgrounds",
     "lat": 45.726848612786206,
     "lng": -86.53527673314433,
-    "description": "",
+    "description": "Official Michigan state forest campground page added.",
     "website": "https://www.michigan.gov/recsearch/sfcampgroundsn-z/portagebay"
   },
   {
@@ -10490,7 +10490,40 @@
     "sourceFolder": "Boondocking",
     "lat": 46.07203234024005,
     "lng": -86.50164462041236,
-    "description": "",
+    "description": "Official Hiawatha National Forest Bear Lake page added.",
     "website": "https://www.fs.usda.gov/r09/hiawatha/recreation/bear-lake-campsites"
+  },
+  {
+    "name": "Whitefish river site",
+    "category": "boondocking",
+    "categoryLabel": "Boondocking",
+    "sourceFolder": "User-provided boondocking places",
+    "lat": 46.09043141144254,
+    "lng": -86.84924825917933,
+    "description": "User-provided boondocking site on the Whitefish River. No amenities.",
+    "website": "",
+    "id": "s954"
+  },
+  {
+    "name": "Escanaba river site",
+    "category": "boondocking",
+    "categoryLabel": "Boondocking",
+    "sourceFolder": "User-provided boondocking places",
+    "lat": 46.14544310151374,
+    "lng": -87.42433039567379,
+    "description": "User-provided boondocking site on the Escanaba River. No amenities.",
+    "website": "",
+    "id": "s955"
+  },
+  {
+    "name": "West Branch State Forest Campground",
+    "category": "public",
+    "categoryLabel": "State / County / Town",
+    "sourceFolder": "State, county, and town Campgrounds",
+    "lat": 46.18731712595539,
+    "lng": -87.74713141313383,
+    "description": "User-provided named state site. No amenities.",
+    "website": "",
+    "id": "s956"
   }
 ]
