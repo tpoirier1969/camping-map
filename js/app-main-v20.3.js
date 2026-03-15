@@ -120,7 +120,6 @@ function applyOverlaySourcesAndLayers() {
     }
   }, beforeId);
 
-  // Keep summary labels off for now. The raw C/B/I text labels clutter the map at low zoom and can interfere with taps.
   if (model.map.getLayer('state-summary-labels')) {
     try { model.map.removeLayer('state-summary-labels'); } catch {}
   }
@@ -128,14 +127,14 @@ function applyOverlaySourcesAndLayers() {
   addLayerIfMissing({
     id: 'sites-circles', type: 'circle', source: 'sites',
     paint: {
-      'circle-radius': ['*', ['coalesce', ['get', 'radius'], 11], ['case', ['<=', ['zoom'], 5], 0.82, ['<=', ['zoom'], 7], 0.98, ['<=', ['zoom'], 8.5], 1.12, 1.28]],
+      'circle-radius': ['*', ['coalesce', ['get', 'radius'], 11], ['case', ['<', ['zoom'], 8], 0.95, ['<', ['zoom'], 10], 1.1, 1.2]],
       'circle-color': ['get', 'color'],
       'circle-opacity': 0.96,
       'circle-pitch-alignment': 'viewport',
       'circle-pitch-scale': 'viewport',
       'circle-emissive-strength': 1,
       'circle-stroke-color': '#101010',
-      'circle-stroke-width': ['case', ['<=', ['zoom'], 5], 1.4, ['<=', ['zoom'], 8.5], 1.7, 2.0]
+      'circle-stroke-width': ['case', ['<', ['zoom'], 8], 1.5, ['<', ['zoom'], 10], 1.8, 2.1]
     }
   }, beforeId);
 
@@ -173,13 +172,13 @@ function setLayerVisibility(layerId, visible) {
 }
 
 function siteMarkerSizeForZoom(zoom) {
-  if (zoom <= 6.2) return 34;
-  if (zoom <= 8.5) return 38;
-  return 42;
+  if (zoom < 8) return 34;
+  if (zoom < 10) return 40;
+  return 44;
 }
 
 function siteMarkerStrokeForZoom(zoom) {
-  return zoom <= 6.2 ? '1.1' : (zoom <= 8.5 ? '1.2' : '1.35');
+  return zoom < 8 ? '1.1' : (zoom < 10 ? '1.25' : '1.38');
 }
 
 function clearDomMarkers() {
@@ -188,12 +187,45 @@ function clearDomMarkers() {
 }
 
 function clearSummaryDomMarkers() {
-  for (const marker of model.summaryDomMarkers) marker.remove();
+  for (const marker of model.summaryDomMarkers) {
+    try { marker.remove(); } catch {}
+  }
   model.summaryDomMarkers = [];
+}
+
+function summaryBadgeHtml(bucketKey, color, count) {
+  return `<span class="summary-badge summary-badge-${bucketKey}"><span class="summary-badge-icon">${markerPreviewHtml(bucketKey, color, 14)}</span><span class="summary-badge-count">${count || 0}</span></span>`;
+}
+
+function summaryMarkerHtml(counts = {}) {
+  return `<span class="summary-marker-cluster">
+    <span class="summary-marker-top">${summaryBadgeHtml('state', BUILTIN_BUCKETS.state.color, counts.campgrounds || 0)}</span>
+    <span class="summary-marker-bottom">${summaryBadgeHtml('boondocking', BUILTIN_BUCKETS.boondocking.color, counts.boondocking || 0)}${summaryBadgeHtml('info', BUILTIN_BUCKETS.info.color, counts.info || 0)}</span>
+  </span>`;
 }
 
 function renderSummaryMarkers() {
   clearSummaryDomMarkers();
+  if (!model.map || shouldShowSiteDetails() || !els.toggleStateSummaries?.checked) return;
+  const fc = buildStateSummaryGeoJson();
+  for (const feature of fc.features) {
+    const props = feature.properties || {};
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'summary-dom-marker';
+    el.setAttribute('aria-label', `${props.state || 'State'} summary`);
+    el.innerHTML = summaryMarkerHtml(props);
+    el.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const bounds = model.stateBBoxes.get(props.state);
+      if (bounds) model.map.fitBounds(bounds, { padding: 32, duration: 650 });
+    });
+    const marker = new maptilersdk.Marker({ element: el, anchor: 'center' })
+      .setLngLat(feature.geometry.coordinates)
+      .addTo(model.map);
+    model.summaryDomMarkers.push(marker);
+  }
 }
 
 function renderDirectSiteMarkers() {
@@ -202,16 +234,21 @@ function renderDirectSiteMarkers() {
   const zoom = model.map.getZoom();
   const bounds = model.map.getBounds();
   const markerSize = siteMarkerSizeForZoom(zoom);
+  const visualSize = Math.max(24, markerSize - 8);
   const strokeScale = siteMarkerStrokeForZoom(zoom);
-  const visibleSites = enabledSites().filter((site) => bounds.contains(site.lngLat)).slice(0, 500);
+  const visibleSites = enabledSites().filter((site) => bounds.contains(site.lngLat)).slice(0, 1200);
   for (const site of visibleSites) {
     const def = model.layerDefs.get(site.layerKey) || BUILTIN_BUCKETS.other;
-    const el = document.createElement('div');
+    const el = document.createElement('button');
+    el.type = 'button';
     el.className = 'site-dom-marker symbol-marker';
+    el.setAttribute('aria-label', site.name || 'Campsite');
     el.style.width = `${markerSize}px`;
     el.style.height = `${markerSize}px`;
-    el.innerHTML = markerPreviewHtml(site.bucket, def.color || hashColor(site.layerKey), markerSize).replace(/stroke-width="([0-9.]+)"/g, (_, value) => `stroke-width="${Number(value) * Number(strokeScale)}"`);
-    el.addEventListener('click', () => {
+    el.innerHTML = `<span class="site-marker-hit" style="width:${markerSize}px;height:${markerSize}px">${markerPreviewHtml(site.bucket, def.color || hashColor(site.layerKey), visualSize).replace(/stroke-width=\"([0-9.]+)\"/g, (_, value) => `stroke-width=\"${Number(value) * Number(strokeScale)}\"`)}</span>`;
+    el.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
       new maptilersdk.Popup({ closeButton: true, maxWidth: '340px' })
         .setLngLat(site.lngLat)
         .setHTML(popupHtmlForSite(site.feature.properties))
@@ -245,7 +282,7 @@ function updateOverlays() {
   const showSiteDetails = shouldShowSiteDetails() && els.toggleSitePoints?.checked;
   const showSummaries = !showSiteDetails && els.toggleStateSummaries?.checked;
   setLayerVisibility('sites-circles', showSiteDetails);
-  setLayerVisibility('state-summary-circles', showSummaries);
+  setLayerVisibility('state-summary-circles', false);
   setLayerVisibility('state-summary-labels', false);
   setLayerVisibility('draft-circle', Boolean(model.draftFeature));
 
