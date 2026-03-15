@@ -1,4 +1,4 @@
-const VERSION = 'v20.4.2';
+const VERSION = 'v20.4.6';
 const DEFAULT_API_KEYS = {
   maptiler: '3jVO6TokbQhyTqtAmF8G',
   thunderforest: 'c0ceacbdeb224697bdedd71af8b20abd'
@@ -7,6 +7,7 @@ const SITE_DATA_URLS = ['data/sites.json'];
 const EXTRA_SITE_DATA_URLS = [];
 const TRAIL_GEOJSON_URLS = [];
 const TRAIL_VECTOR_MANIFEST_URLS = [];
+const BOONDOCKING_ZONE_URLS = ['data/boondocking-zones.geojson'];
 const DEFAULT_CENTER = [-87.4, 46.6];
 const DEFAULT_ZOOM = 6;
 const DETAIL_ZOOM = 6.2;
@@ -22,7 +23,9 @@ const STORAGE_KEYS = {
   basemap: 'campingMap.basemap',
   terrain: 'campingMap.terrain',
   tilt: 'campingMap.pitch',
-  thunderforestApiKey: 'campingMap.thunderforestApiKey'
+  thunderforestApiKey: 'campingMap.thunderforestApiKey',
+  manualDraftQueue: 'campingMap.manualDraftQueue',
+  terrainExaggeration: 'campingMap.terrainExaggeration'
 };
 const STATE_CENTERS = {
   MI: [-85.55, 44.65],
@@ -108,6 +111,7 @@ const els = {
   countsGrid: document.getElementById('countsGrid'),
   toggleStateSummaries: document.getElementById('toggleStateSummaries'),
   toggleSitePoints: document.getElementById('toggleSitePoints'),
+  toggleBoondockingZones: document.getElementById('toggleBoondockingZones'),
   toggleTrails: document.getElementById('toggleTrails'),
   trailSection: document.getElementById('trailSection'),
   trailStatusText: document.getElementById('trailStatusText'),
@@ -126,6 +130,8 @@ const els = {
   keySection: document.getElementById('keySection'),
   basemapSelect: document.getElementById('basemapSelect'),
   toggleTerrain: document.getElementById('toggleTerrain'),
+  terrainExaggerationSlider: document.getElementById('terrainExaggerationSlider'),
+  terrainExaggerationValue: document.getElementById('terrainExaggerationValue'),
   togglePitch: document.getElementById('togglePitch'),
   toggleAddMode: document.getElementById('toggleAddMode'),
   zoomReadout: document.getElementById('zoomReadout'),
@@ -135,7 +141,12 @@ const els = {
   searchResults: document.getElementById('searchResults'),
   loadingOverlay: document.getElementById('loadingOverlay'),
   loadingText: document.getElementById('loadingText'),
-  dataStats: document.getElementById('dataStats')
+  dataStats: document.getElementById('dataStats'),
+  draftQueueText: document.getElementById('draftQueueText'),
+  draftQueueStatus: document.getElementById('draftQueueStatus'),
+  copyDraftQueueBtn: document.getElementById('copyDraftQueueBtn'),
+  downloadDraftQueueBtn: document.getElementById('downloadDraftQueueBtn'),
+  clearDraftQueueBtn: document.getElementById('clearDraftQueueBtn')
 };
 els.versionTag.textContent = VERSION;
 if (els.toggleStateSummaries) els.toggleStateSummaries.checked = true;
@@ -156,6 +167,7 @@ const model = {
   styleReady: false,
   mapStyleMode: localStorage.getItem(STORAGE_KEYS.basemap) || 'outdoor',
   terrainEnabled: localStorage.getItem(STORAGE_KEYS.terrain) === 'true',
+  terrainExaggeration: (() => { const raw = Number(localStorage.getItem(STORAGE_KEYS.terrainExaggeration)); return Number.isFinite(raw) && raw >= 1 && raw <= 2 ? raw : 1.5; })(),
   tiltEnabled: localStorage.getItem(STORAGE_KEYS.tilt) === 'true',
   draftFeature: null,
   domMarkers: [],
@@ -179,5 +191,7 @@ const model = {
   styleSequence: 0,
   popupHandlersBound: false,
   cursorHandlersBound: false,
-  activePopup: null
+  activePopup: null,
+  manualDraftQueue: [],
+  boondockingZones: null
 };

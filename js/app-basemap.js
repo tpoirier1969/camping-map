@@ -58,7 +58,7 @@ function handleStyleReadyAfterBuild({ center, zoom, pitch, bearing, context = 'r
   model.styleReady = true;
   try {
     if (model.hasApiKey && model.terrainEnabled && ['satellite','topo','outdoor'].includes(model.mapStyleMode)) {
-      try { model.map.enableTerrain(); } catch {}
+      try { model.map.enableTerrain(model.terrainExaggeration || 1.5); } catch {}
     }
     applyOverlaySourcesAndLayers();
     attachPopupHandlers();
@@ -122,6 +122,7 @@ function mapStyleForMode() {
   }
   if (model.mapStyleMode === 'tf_outdoors') return buildThunderforestRasterStyle('outdoors') || buildOsmFallbackStyle();
   if (model.mapStyleMode === 'tf_landscape') return buildThunderforestRasterStyle('landscape') || buildOsmFallbackStyle();
+  if (model.mapStyleMode === 'tf_mobile_atlas') return buildThunderforestRasterStyle('mobile-atlas') || buildOsmFallbackStyle();
   return buildOsmFallbackStyle();
 }
 
@@ -147,6 +148,11 @@ function refreshBasemapUiState() {
       opt.textContent = hasThunderforestKey ? 'Thunderforest Landscape' : 'Thunderforest Landscape - Disabled';
       return;
     }
+    if (opt.value === 'tf_mobile_atlas') {
+      opt.disabled = !hasThunderforestKey;
+      opt.textContent = hasThunderforestKey ? 'Thunderforest Mobile Atlas' : 'Thunderforest Mobile Atlas - Disabled';
+      return;
+    }
     opt.disabled = !hasKey;
     if (opt.value === 'satellite') opt.textContent = hasKey ? 'Satellite Hybrid' : 'Satellite Hybrid (key required)';
     else if (opt.value === 'outdoor') opt.textContent = hasKey ? 'Outdoor' : 'Outdoor (key required)';
@@ -155,7 +161,7 @@ function refreshBasemapUiState() {
 
   const current = els.basemapSelect.value;
   const wantsMapTiler = ['satellite','topo','outdoor'].includes(current);
-  const wantsThunderforest = ['tf_outdoors','tf_landscape'].includes(current);
+  const wantsThunderforest = ['tf_outdoors','tf_landscape','tf_mobile_atlas'].includes(current);
   if ((wantsMapTiler && !hasKey) || (wantsThunderforest && !hasThunderforestKey)) {
     els.basemapSelect.value = 'osm';
     model.mapStyleMode = 'osm';
@@ -164,6 +170,7 @@ function refreshBasemapUiState() {
 
   const terrainCapable = hasKey && ['satellite','topo','outdoor'].includes(els.basemapSelect.value);
   if (els.toggleTerrain) els.toggleTerrain.disabled = !terrainCapable;
+  if (els.terrainExaggerationSlider) els.terrainExaggerationSlider.disabled = !terrainCapable;
   if (els.togglePitch) els.togglePitch.disabled = !terrainCapable || !model.terrainEnabled;
 }
 
@@ -173,6 +180,23 @@ function setRotationInteractions() {
   try { model.map.touchZoomRotate?.enable(); } catch {}
   try { model.map.touchZoomRotate?.enableRotation(); } catch {}
   try { model.map.touchPitch?.enable(); } catch {}
+}
+
+function updateTerrainExaggerationUi() {
+  if (els.terrainExaggerationSlider) els.terrainExaggerationSlider.value = String(model.terrainExaggeration || 1.5);
+  if (els.terrainExaggerationValue) els.terrainExaggerationValue.textContent = `${Number(model.terrainExaggeration || 1.5).toFixed(2)}×`;
+}
+
+function applyTerrainExaggeration() {
+  updateTerrainExaggerationUi();
+  if (!model.map || !model.hasApiKey || !model.terrainEnabled) return;
+  if (!['satellite','topo','outdoor'].includes(model.mapStyleMode)) return;
+  try {
+    if (typeof model.map.setTerrainExaggeration === 'function') {
+      model.map.setTerrainExaggeration(model.terrainExaggeration || 1.5);
+      return;
+    }
+  } catch {}
 }
 
 function applyPitch() {

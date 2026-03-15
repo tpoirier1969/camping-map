@@ -21,3 +21,9 @@ Active files:
 - js/app-ui.js
 - js/app-main.js
 - data/sites.json
+
+
+v20.4.5 adds a 3D exaggeration slider in the Basemap section (1.00x to 2.00x).
+
+
+v20.4.6 adds a broad boondocking-zones layer, Thunderforest Mobile Atlas, west-end Ontonagon-to-Wisconsin-border campsite additions, and larger tap targets with updated federal/state/local symbols.

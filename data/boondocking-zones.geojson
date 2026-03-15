@@ -1,0 +1,117 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Ottawa National Forest - West End dispersed-camping search zone",
+        "manager": "U.S. Forest Service",
+        "kind": "Broad boondocking / dispersed-camping area",
+        "rule": "Ottawa says free dispersed camping is allowed along roads and trails open to OHVs on Ottawa National Forest land. Cross-country travel is prohibited, so use MVUM/OHV-open roads and posted restrictions.",
+        "notes": "General search zone only, not a parcel-accurate legal boundary. Best used as a visual reminder that this whole west-end Ottawa block is worth checking for legal roadside dispersed camping.",
+        "website": "https://www.fs.usda.gov/r09/ottawa/recreation/opportunities/highway-vehicles-ohv",
+        "fill": "#4aa85a",
+        "stroke": "#2b6f36"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-90.22, 46.80],
+          [-89.98, 46.77],
+          [-89.70, 46.72],
+          [-89.33, 46.70],
+          [-89.08, 46.58],
+          [-88.83, 46.34],
+          [-88.80, 46.05],
+          [-88.98, 45.95],
+          [-89.37, 45.96],
+          [-89.72, 46.03],
+          [-90.00, 46.22],
+          [-90.17, 46.47],
+          [-90.22, 46.80]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Hiawatha National Forest - West Zone OHV dispersed-camping search zone",
+        "manager": "U.S. Forest Service",
+        "kind": "Broad boondocking / dispersed-camping area",
+        "rule": "Hiawatha has 2,000+ miles of forest roads open for motorized use. Use the West Zone ORV map / MVUM to identify legal open-road access and do not assume every forest road is open.",
+        "notes": "General search zone around the Hovey / Corner / Island Lake cluster where OHV-camping indicators make nearby legal roadside overnights more likely. This is a broad guide area, not a surveyed forest boundary.",
+        "website": "https://www.fs.usda.gov/activity/hiawatha/recreation/ohv",
+        "fill": "#57b36a",
+        "stroke": "#327742"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-86.88, 46.36],
+          [-86.55, 46.36],
+          [-86.45, 46.28],
+          [-86.44, 46.11],
+          [-86.56, 46.04],
+          [-86.79, 46.05],
+          [-86.90, 46.15],
+          [-86.88, 46.36]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Chequamegon-Nicolet - Silver Cliff / Lakewood / Wabeno dispersed-camping search zone",
+        "manager": "U.S. Forest Service",
+        "kind": "Broad boondocking / dispersed-camping area",
+        "rule": "Chequamegon-Nicolet dispersed camping is limited to 21 days in 28, the next location must be at least 1 road mile away, and dispersed camping is prohibited within one-quarter mile of a developed recreation site.",
+        "notes": "General east-side CNNF search zone for roadside dispersed camping near Silver Cliff, Lakewood, and Wabeno. This is a broad guide area, not a parcel-accurate forest boundary.",
+        "website": "https://www.fs.usda.gov/r09/chequamegon-nicolet/alerts/forest-order-09-13-25-02-general-occupancy-and-use-restrictions",
+        "fill": "#64b875",
+        "stroke": "#3a7f49"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-88.06, 45.54],
+          [-87.73, 45.56],
+          [-87.46, 45.49],
+          [-87.22, 45.34],
+          [-87.18, 45.09],
+          [-87.38, 44.99],
+          [-87.72, 45.00],
+          [-87.96, 45.12],
+          [-88.06, 45.31],
+          [-88.06, 45.54]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Michigan state-forest dispersed-camping search zone - Two Hearted / Blind Sucker / Kingston / Culhane block",
+        "manager": "Michigan DNR",
+        "kind": "Broad boondocking / dispersed-camping area",
+        "rule": "Michigan state-forest dispersed camping is generally allowed more than 1 mile from a state forest campground, outside posted or excluded lands, with a posted registration card.",
+        "notes": "This shaded block is a high-priority search area for legal state-forest boondocking between named campgrounds. It is a planning guide area, not a legal parcel boundary.",
+        "website": "https://www.michigan.gov/dnr/faqs/state-parks-and-camping/camping-in-a-state-forest",
+        "fill": "#73c183",
+        "stroke": "#418950"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-86.38, 46.77],
+          [-85.92, 46.79],
+          [-85.31, 46.76],
+          [-85.12, 46.56],
+          [-85.27, 46.33],
+          [-85.72, 46.28],
+          [-86.18, 46.33],
+          [-86.39, 46.51],
+          [-86.38, 46.77]
+        ]]
+      }
+    }
+  ]
+}

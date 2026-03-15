@@ -8375,13 +8375,13 @@
   {
     "id": "s733",
     "name": "Pomeroy Lake Campground",
-    "category": "public",
-    "categoryLabel": "State / County / Town",
-    "sourceFolder": "State, county, and town Campgrounds",
+    "category": "federal",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
     "lat": 46.281465,
     "lng": -89.573967,
-    "description": "",
-    "website": ""
+    "description": "Ottawa National Forest campground near Marenisco with 11 sites, potable water, and OHV-friendly access on roadway and camping spur.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/pomeroy-lake-campground"
   },
   {
     "id": "s734",
@@ -10134,13 +10134,13 @@
   {
     "id": "s889",
     "name": "Sturgeon River Campground",
-    "category": "public",
-    "categoryLabel": "State / County / Town",
-    "sourceFolder": "State, county, and town Campgrounds",
+    "category": "federal",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
     "lat": 46.570036,
     "lng": -88.656507,
-    "description": "",
-    "website": ""
+    "description": "Ottawa National Forest campground near Sturgeon River Gorge Wilderness with 9 sites and no potable water. OHV-friendly area and useful dispersed-camping anchor.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/sturgeon-river-campground"
   },
   {
     "id": "s890",
@@ -11741,5 +11741,170 @@
     "lng": -85.0438098,
     "description": "",
     "website": ""
+  },
+  {
+    "name": "Porcupine Mountains Union Bay Modern Campground",
+    "category": "state modern",
+    "categoryLabel": "State Campgrounds",
+    "sourceFolder": "State modern Campgrounds",
+    "lat": 46.83267,
+    "lng": -89.74551,
+    "description": "Modern state-park campground on Union Bay in the Porcupine Mountains. Large developed campground with park amenities.",
+    "website": "https://www.michigan.gov/recsearch/parks/porkies",
+    "id": "s1030"
+  },
+  {
+    "name": "Bob Lake Campground",
+    "category": "federal",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.66230759,
+    "lng": -88.91411255,
+    "description": "Ottawa National Forest campground southeast of Ontonagon with 17 sites, hand-pump water, and vault toilets. Good west-end public-land basecamp.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/bob-lake-campground",
+    "id": "s1031"
+  },
+  {
+    "name": "Courtney Lake Campground",
+    "category": "federal",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.41583408,
+    "lng": -88.68205671,
+    "description": "Ottawa National Forest campground with 21 sites plus 2 walk-in tent sites. First-come, first-served.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/courtney-lake-campground",
+    "id": "s1032"
+  },
+  {
+    "name": "Lake Ste. Kathryn Campground",
+    "category": "federal",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.39317419,
+    "lng": -88.72262918,
+    "description": "Ottawa National Forest campground south of Sidnaw with 24 drive-in sites, hand-pump water, and vault toilets. OHV-friendly area and strong boondocking anchor.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/lake-ste-kathryn-campground",
+    "id": "s1033"
+  },
+  {
+    "name": "Lake Ottawa Campground",
+    "category": "federal",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.0807608,
+    "lng": -88.76003616,
+    "description": "Developed Ottawa National Forest campground southwest of Iron River with potable water, flush toilets, and boat launch. Open to OHVs on roadway/camping spur.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/lake-ottawa-recreation-area",
+    "id": "s1034"
+  },
+  {
+    "name": "Paint River Forks Campground",
+    "category": "federal rustic",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.1887,
+    "lng": -88.7662,
+    "description": "Free rustic Ottawa National Forest campground at the Paint River forks. Year-round and a useful remote-camping anchor.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/paint-river-forks-campground",
+    "id": "s1035"
+  },
+  {
+    "name": "Golden Lake Campground",
+    "category": "federal",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.17160677,
+    "lng": -88.88275779,
+    "description": "Ottawa National Forest campground near Watersmeet. Fee campground and useful anchor for the surrounding dispersed-camping road network.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/golden-lake-campground",
+    "id": "s1036"
+  },
+  {
+    "name": "Marion Lake Campground",
+    "category": "federal",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.269137,
+    "lng": -89.086584,
+    "description": "Ottawa National Forest campground east of Watersmeet with developed sites, potable water, beach, and boat access.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/marion-lake-campground",
+    "id": "s1037"
+  },
+  {
+    "name": "Sylvania (Clark Lake) Campground",
+    "category": "federal",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.24029372,
+    "lng": -89.3223604,
+    "description": "Drive-in campground in the Sylvania Recreation Area. Developed federal campground; surrounding wilderness camping is designated-site-only.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/sylvania-clark-lake-campground",
+    "id": "s1038"
+  },
+  {
+    "name": "Moosehead Lake Campground",
+    "category": "federal rustic",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.2367,
+    "lng": -89.4681,
+    "description": "Small Ottawa National Forest campground southeast of Marenisco with vault toilets and pressurized water.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/moosehead-lake-campground",
+    "id": "s1039"
+  },
+  {
+    "name": "Black River Harbor Campground",
+    "category": "federal",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.66416323,
+    "lng": -90.05190622,
+    "description": "Major Ottawa National Forest campground on Lake Superior at Black River Harbor with waterfall trail access, harbor access, and OHV-friendly spur roads.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/black-river-harbor-recreation-area",
+    "id": "s1040"
+  },
+  {
+    "name": "Lake Gogebic State Park Campground",
+    "category": "state modern",
+    "categoryLabel": "State Campgrounds",
+    "sourceFolder": "State modern Campgrounds",
+    "lat": 46.5032,
+    "lng": -89.5822,
+    "description": "State-park campground on Lake Gogebic. Check current status before relying on it because the campground has ongoing 2026 upgrade work.",
+    "website": "https://www.michigan.gov/recsearch/parks/lakegogebic",
+    "id": "s1041"
+  },
+  {
+    "name": "Ottawa NF West Dispersed Camping Anchor",
+    "category": "boondocking",
+    "categoryLabel": "Boondocking",
+    "sourceFolder": "Boondocking",
+    "lat": 46.454,
+    "lng": -89.42,
+    "description": "Broad Ottawa National Forest dispersed-camping anchor for the Ontonagon-to-Wisconsin-border corridor. Use MVUM/OHV-open roads and follow Ottawa dispersed-camping rules.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/opportunities/highway-vehicles-ohv",
+    "id": "s1042"
+  },
+  {
+    "name": "Black River / Bessemer Dispersed Camping Anchor",
+    "category": "boondocking",
+    "categoryLabel": "Boondocking",
+    "sourceFolder": "Boondocking",
+    "lat": 46.617,
+    "lng": -90.001,
+    "description": "Boondocking search anchor in Ottawa National Forest west-end road country near Black River Harbor and Bessemer district access.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/opportunities/highway-vehicles-ohv",
+    "id": "s1043"
+  },
+  {
+    "name": "Watersmeet / Marion / Golden Dispersed Camping Anchor",
+    "category": "boondocking",
+    "categoryLabel": "Boondocking",
+    "sourceFolder": "Boondocking",
+    "lat": 46.203,
+    "lng": -89.03,
+    "description": "Boondocking search anchor for Ottawa National Forest road-access country around Watersmeet, Marion Lake, and Golden Lake.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/opportunities/highway-vehicles-ohv",
+    "id": "s1044"
   }
 ]

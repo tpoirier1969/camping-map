@@ -11,10 +11,35 @@ function popupHtmlForState(props) {
   return `<div class="popup-content"><div class="popup-title">${escapeHtml(props.state || 'State')}</div><div>Total campgrounds: ${props.campgrounds || 0}</div><div>Boondocking sites: ${props.boondocking || 0}</div><div>Info / reference: ${props.info || 0}</div><div class="popup-actions"><button type="button" id="zoomStateBtn">Zoom to state</button></div></div>`;
 }
 
+function popupHtmlForZone(props = {}) {
+  return `<div class="popup-content"><div class="popup-title">${escapeHtml(props.name || 'Boondocking zone')}</div><div class="popup-meta">${escapeHtml(props.manager || 'Public land')} · ${escapeHtml(props.kind || 'Broad dispersed-camping area')}</div><div>${escapeHtml(props.rule || '')}</div>${props.notes ? `<div style="margin-top:8px;">${escapeHtml(props.notes)}</div>` : ''}${props.website ? `<div class="popup-actions"><a href="${escapeAttribute(props.website)}" target="_blank" rel="noopener noreferrer">Source</a></div>` : ''}</div>`;
+}
+
 function popupHtmlForDraft(feature) {
   const [lng, lat] = feature.geometry.coordinates;
-  const snippet = JSON.stringify({ name: 'New site', category: 'boondocking', state: '', lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), notes: '' }, null, 2);
-  return `<div class="popup-content"><div class="popup-title">Draft site pin</div><div class="popup-meta">${lat.toFixed(6)}, ${lng.toFixed(6)}</div><div>Copy this into your dataset:</div><pre style="white-space:pre-wrap;max-width:280px;">${escapeHtml(snippet)}</pre><div class="popup-actions"><button type="button" id="copyDraftBtn">Copy JSON</button></div></div>`;
+  return `<div class="popup-content">
+    <div class="popup-title">Draft site pin</div>
+    <div class="popup-meta">${lat.toFixed(6)}, ${lng.toFixed(6)}</div>
+    <div class="draft-form-grid">
+      <input id="draftNameInput" type="text" placeholder="Site name">
+      <select id="draftCategorySelect">
+        <option value="boondocking">Boondocking</option>
+        <option value="state">State campground</option>
+        <option value="federal">Federal campground</option>
+        <option value="private">Private campground</option>
+        <option value="local">Local campground</option>
+        <option value="info">Info / reference</option>
+      </select>
+      <input id="draftStateInput" type="text" placeholder="State (example: MI)">
+      <input id="draftWebsiteInput" type="text" placeholder="Website URL">
+      <input id="draftAmenitiesInput" type="text" placeholder="Amenities (comma separated)">
+      <textarea id="draftNotesInput" placeholder="Notes"></textarea>
+    </div>
+    <div class="popup-actions">
+      <button type="button" id="appendDraftBtn">Append to queue</button>
+      <button type="button" id="copyDraftBtn">Copy JSON</button>
+    </div>
+  </div>`;
 }
 
 function attachPopupHandlers() {
@@ -48,17 +73,15 @@ function attachPopupHandlers() {
   model.map.on('click', 'draft-circle', (event) => {
     const feature = event.features?.[0];
     if (!feature) return;
-    const popup = new maptilersdk.Popup({ closeButton: true, maxWidth: '360px' })
-      .setLngLat(feature.geometry.coordinates)
-      .setHTML(popupHtmlForDraft(feature))
-      .addTo(model.map);
-    popup.on('open', () => {
-      const btn = popup.getElement().querySelector('#copyDraftBtn');
-      btn?.addEventListener('click', async () => {
-        const [lng, lat] = feature.geometry.coordinates;
-        const text = JSON.stringify({ name: 'New site', category: 'boondocking', state: '', lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), notes: '' }, null, 2);
-        try { await navigator.clipboard.writeText(text); btn.textContent = 'Copied'; } catch { btn.textContent = 'Copy failed'; }
-      }, { once: true });
+    openDraftPopup(feature.geometry.coordinates, feature);
+  });
+
+  ['boondocking-zones-fill','boondocking-zones-outline'].forEach((layerId) => {
+    model.map.on('click', layerId, (event) => {
+      const feature = event.features?.[0];
+      if (!feature) return;
+      const lngLat = event.lngLat ? [event.lngLat.lng, event.lngLat.lat] : (feature.geometry.type === 'Polygon' ? feature.geometry.coordinates[0][0] : DEFAULT_CENTER);
+      openSitePopup(lngLat, popupHtmlForZone(feature.properties || {}));
     });
   });
 }
@@ -78,7 +101,7 @@ function addLayerIfMissing(layerDef, beforeId) {
 }
 
 function moveOverlayLayersToTop() {
-  const order = ['state-summary-circles', 'state-summary-labels', 'draft-circle', 'draft-label', 'sites-circles'];
+  const order = ['boondocking-zones-fill','boondocking-zones-outline','state-summary-circles', 'state-summary-labels', 'draft-circle', 'draft-label', 'sites-circles'];
   for (const id of order) {
     if (model.map.getLayer(id)) {
       try { model.map.moveLayer(id); } catch {}
@@ -105,6 +128,24 @@ function applyOverlaySourcesAndLayers() {
   ensureSource('sites', { type: 'geojson', data: buildSiteGeoJson() });
   ensureSource('state-summaries', { type: 'geojson', data: buildStateSummaryGeoJson() });
   ensureSource('draft-site', { type: 'geojson', data: model.draftFeature ? { type: 'FeatureCollection', features: [model.draftFeature] } : { type: 'FeatureCollection', features: [] } });
+  ensureSource('boondocking-zones', { type: 'geojson', data: model.boondockingZones || { type: 'FeatureCollection', features: [] } });
+
+  addLayerIfMissing({
+    id: 'boondocking-zones-fill', type: 'fill', source: 'boondocking-zones',
+    paint: {
+      'fill-color': ['coalesce', ['get', 'fill'], '#49a35a'],
+      'fill-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.16, 8, 0.12, 12, 0.06]
+    }
+  }, beforeId);
+
+  addLayerIfMissing({
+    id: 'boondocking-zones-outline', type: 'line', source: 'boondocking-zones',
+    paint: {
+      'line-color': ['coalesce', ['get', 'stroke'], '#2e6c3b'],
+      'line-width': ['interpolate', ['linear'], ['zoom'], 4, 1.4, 10, 2.2],
+      'line-opacity': 0.9
+    }
+  }, beforeId);
 
   addLayerIfMissing({
     id: 'state-summary-circles', type: 'circle', source: 'state-summaries',
@@ -172,10 +213,10 @@ function setLayerVisibility(layerId, visible) {
 }
 
 function siteMarkerSizeForZoom(zoom) {
-  if (zoom < 8) return 34;
-  if (zoom < 10) return 46;
-  if (zoom < 12) return 50;
-  return 54;
+  if (zoom < 8) return 38;
+  if (zoom < 10) return 52;
+  if (zoom < 12) return 56;
+  return 60;
 }
 
 function siteMarkerStrokeForZoom(zoom) {
@@ -230,6 +271,69 @@ function renderSummaryMarkers() {
   }
 }
 
+
+function buildDraftRecordFromPopup(feature, rootEl) {
+  const [lng, lat] = feature.geometry.coordinates;
+  const amenitiesRaw = rootEl.querySelector('#draftAmenitiesInput')?.value || '';
+  return {
+    name: (rootEl.querySelector('#draftNameInput')?.value || 'New site').trim(),
+    category: (rootEl.querySelector('#draftCategorySelect')?.value || 'boondocking').trim(),
+    state: (rootEl.querySelector('#draftStateInput')?.value || '').trim(),
+    website: (rootEl.querySelector('#draftWebsiteInput')?.value || '').trim(),
+    amenities: amenitiesRaw.split(',').map((v) => v.trim()).filter(Boolean),
+    notes: (rootEl.querySelector('#draftNotesInput')?.value || '').trim(),
+    lat: Number(lat.toFixed(6)),
+    lng: Number(lng.toFixed(6))
+  };
+}
+
+async function copyDraftRecord(record, btn) {
+  const text = JSON.stringify(record);
+  try {
+    await navigator.clipboard.writeText(text);
+    if (btn) btn.textContent = 'Copied';
+    refreshDraftQueueUi('Draft JSON copied.');
+  } catch (error) {
+    console.error(error);
+    if (btn) btn.textContent = 'Copy failed';
+    refreshDraftQueueUi('Copy failed on this device.');
+  }
+}
+
+function appendDraftRecord(record) {
+  model.manualDraftQueue.push(JSON.stringify(record));
+  saveManualDraftQueue();
+  refreshDraftQueueUi('Draft appended to queue.');
+  model.draftFeature = null;
+  updateOverlays();
+  closeActivePopup();
+}
+
+function openDraftPopup(lngLat, feature) {
+  closeActivePopup();
+  const popup = new maptilersdk.Popup({ closeButton: true, maxWidth: '360px' })
+    .setLngLat(lngLat)
+    .setHTML(popupHtmlForDraft(feature))
+    .addTo(model.map);
+  popup.on('open', () => {
+    const rootEl = popup.getElement();
+    const appendBtn = rootEl.querySelector('#appendDraftBtn');
+    const copyBtn = rootEl.querySelector('#copyDraftBtn');
+    appendBtn?.addEventListener('click', () => {
+      const record = buildDraftRecordFromPopup(feature, rootEl);
+      appendDraftRecord(record);
+    });
+    copyBtn?.addEventListener('click', () => {
+      const record = buildDraftRecordFromPopup(feature, rootEl);
+      copyDraftRecord(record, copyBtn);
+    });
+  });
+  popup.on('close', () => {
+    if (model.activePopup === popup) model.activePopup = null;
+  });
+  model.activePopup = popup;
+}
+
 function closeActivePopup() {
   if (!model.activePopup) return;
   try { model.activePopup.remove(); } catch {}
@@ -255,7 +359,8 @@ function renderDirectSiteMarkers() {
   const zoom = model.map.getZoom();
   const bounds = model.map.getBounds();
   const markerSize = siteMarkerSizeForZoom(zoom);
-  const visualSize = Math.max(24, markerSize - 8);
+  const hitSize = markerSize + 10;
+  const visualSize = Math.max(26, markerSize - 10);
   const strokeScale = siteMarkerStrokeForZoom(zoom);
   const visibleSites = enabledSites().filter((site) => bounds.contains(site.lngLat)).slice(0, 1200);
   for (const site of visibleSites) {
@@ -293,9 +398,11 @@ function updateOverlays() {
   const summarySource = model.map.getSource('state-summaries');
   const siteSource = model.map.getSource('sites');
   const draftSource = model.map.getSource('draft-site');
+  const zoneSource = model.map.getSource('boondocking-zones');
   if (summarySource?.setData) summarySource.setData(buildStateSummaryGeoJson());
   if (siteSource?.setData) siteSource.setData(sourceDataForSites());
   if (draftSource?.setData) draftSource.setData(model.draftFeature ? { type: 'FeatureCollection', features: [model.draftFeature] } : { type: 'FeatureCollection', features: [] });
+  if (zoneSource?.setData) zoneSource.setData(model.boondockingZones || { type: 'FeatureCollection', features: [] });
 
   const sitePointsEnabled = els.toggleSitePoints ? els.toggleSitePoints.checked : true;
   const summariesEnabled = els.toggleStateSummaries ? els.toggleStateSummaries.checked : true;
@@ -305,6 +412,9 @@ function updateOverlays() {
   setLayerVisibility('state-summary-circles', false);
   setLayerVisibility('state-summary-labels', false);
   setLayerVisibility('draft-circle', Boolean(model.draftFeature));
+  const zonesEnabled = els.toggleBoondockingZones ? els.toggleBoondockingZones.checked : true;
+  setLayerVisibility('boondocking-zones-fill', zonesEnabled);
+  setLayerVisibility('boondocking-zones-outline', zonesEnabled);
 
   if (showSiteDetails) renderDirectSiteMarkers(); else clearDomMarkers();
   if (showSummaries) renderSummaryMarkers(); else clearSummaryDomMarkers();
@@ -316,7 +426,7 @@ function updateOverlays() {
 function setDraftAt(lngLat) {
   model.draftFeature = { type: 'Feature', properties: { name: 'Draft site' }, geometry: { type: 'Point', coordinates: [lngLat.lng, lngLat.lat] } };
   updateOverlays();
-  openSitePopup([lngLat.lng, lngLat.lat], popupHtmlForDraft(model.draftFeature));
+  openDraftPopup([lngLat.lng, lngLat.lat], model.draftFeature);
 }
 
 function initMap() {

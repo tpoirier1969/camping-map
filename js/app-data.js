@@ -6,6 +6,16 @@ function getSavedThunderforestKey() {
   return (localStorage.getItem(STORAGE_KEYS.thunderforestApiKey) || DEFAULT_API_KEYS.thunderforest || '').trim();
 }
 
+function loadManualDraftQueue() {
+  const raw = (localStorage.getItem(STORAGE_KEYS.manualDraftQueue) || '').trim();
+  if (!raw) return [];
+  return raw.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+}
+
+function saveManualDraftQueue() {
+  localStorage.setItem(STORAGE_KEYS.manualDraftQueue, model.manualDraftQueue.join('\n'));
+}
+
 
 function ensureBasemapOptions() {
   if (!els.basemapSelect) return;
@@ -15,6 +25,7 @@ function ensureBasemapOptions() {
     ['topo', 'Topo'],
     ['tf_outdoors', 'Thunderforest Outdoors - Disabled'],
     ['tf_landscape', 'Thunderforest Landscape - Disabled'],
+    ['tf_mobile_atlas', 'Thunderforest Mobile Atlas - Disabled'],
     ['osm', 'OpenStreetMap fallback']
   ];
   for (const [value, label] of wanted) {
@@ -415,15 +426,17 @@ function deriveLayerInfo(raw, category) {
 
 function bucketSymbol(bucket) {
   switch (bucket) {
-    case 'state':
     case 'federal':
+    case 'national_forest':
+      return 'sign';
+    case 'state':
     case 'modern':
     case 'rustic':
-    case 'local':
     case 'state_local':
-      return 'campfire';
+      return 'tent';
+    case 'local':
+      return 'pin';
     case 'boondocking':
-    case 'national_forest':
       return 'tree';
     case 'private':
       return 'camper';
@@ -446,9 +459,13 @@ function symbolSvg(symbol, color = 'currentColor') {
     case 'arrowhead':
       return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6c-9 8-15 21-13 37 5 2 9 6 13 15 4-9 8-13 13-15 2-16-4-29-13-37Z" fill="${fill}" stroke="${dark}" stroke-width="2.6" stroke-linejoin="round"/><path d="M24 25c3 1 5 3 8 6 3-3 5-5 8-6" fill="none" stroke="${light}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 35h10" stroke="${light}" stroke-width="3" stroke-linecap="round"/></svg>`;
     case 'tent':
-      return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 48 32 14l22 34H10Z" fill="${fill}" stroke="${dark}" stroke-width="2.6" stroke-linejoin="round"/><path d="M32 14v34" stroke="${light}" stroke-width="3" stroke-linecap="round"/><path d="M20 48 32 31l12 17" fill="none" stroke="${light}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M9 49 28 18c1.7-2.8 5.7-2.8 7.4 0L55 49H9Z" fill="${fill}" stroke="${dark}" stroke-width="2.8" stroke-linejoin="round"/><path d="M32 18v31" stroke="${light}" stroke-width="3.2" stroke-linecap="round"/><path d="M19 49 32 29l13 20" fill="none" stroke="${light}" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 49h36" stroke="${dark}" stroke-width="2.4" stroke-linecap="round"/></svg>`;
     case 'campfire':
       return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M27 13c5 7 4 12 1 16-5 5-6 9-6 13 0 8 5 13 10 13s10-5 10-13c0-5-2-10-8-16 2 6-1 9-3 10 0-7-1-14-4-23Z" fill="${fill}" stroke="${dark}" stroke-width="2.6" stroke-linejoin="round"/><path d="M18 49h28" stroke="${dark}" stroke-width="3.2" stroke-linecap="round"/><path d="M22 54 31 45M42 54 33 45" stroke="${light}" stroke-width="3.2" stroke-linecap="round"/></svg>`;
+    case 'sign':
+      return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M31 11v42" stroke="${dark}" stroke-width="4.4" stroke-linecap="round"/><path d="M18 18h23l5 4-5 4H18Z" fill="${fill}" stroke="${dark}" stroke-width="2.7" stroke-linejoin="round"/><path d="M14 31h19l5 4-5 4H14Z" fill="${light}" stroke="${dark}" stroke-width="2.5" stroke-linejoin="round"/><path d="M25 53h12" stroke="${dark}" stroke-width="3.5" stroke-linecap="round"/></svg>`;
+    case 'pin':
+      return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 9c10 0 18 8 18 18 0 11-10 18-18 28-8-10-18-17-18-28 0-10 8-18 18-18Z" fill="${fill}" stroke="${dark}" stroke-width="2.8" stroke-linejoin="round"/><circle cx="32" cy="27" r="6.5" fill="${light}" stroke="${dark}" stroke-width="2.2"/></svg>`;
     case 'camper':
       return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 26h34c5 0 10 4 12 9l2 5v8H8Z" fill="${fill}" stroke="${dark}" stroke-width="2.6" stroke-linejoin="round"/><circle cx="22" cy="48" r="5" fill="${light}" stroke="${dark}" stroke-width="2.6"/><circle cx="45" cy="48" r="5" fill="${light}" stroke="${dark}" stroke-width="2.6"/><path d="M15 31h16v10H15Z" fill="${light}" stroke="${dark}" stroke-width="2.2"/><path d="M35 31h8" stroke="${dark}" stroke-width="2.2" stroke-linecap="round"/></svg>`;
     case 'info':
