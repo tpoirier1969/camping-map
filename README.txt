@@ -1,23 +1,23 @@
-Camping Map v18.9
+Camping Map Clean Base
 
-This build uses MapLibre + MapTiler styles.
+This package is a cleaned baseline built from the newest working code only.
 
-How to use the MapTiler key on each device:
-1. Upload this site to GitHub Pages (or open locally through your normal workflow).
-2. Open the map on the device.
-3. Open Settings / Menu.
-4. Paste your MapTiler API key into the 'MapTiler API key' field.
-5. Tap Save.
-6. Choose Outdoor or Satellite. Turn on 3D terrain if desired.
+What was cleaned:
+- Removed legacy v20.1/v20.2/v20.3 duplicate script files
+- Kept only the active app modules
+- Consolidated historical site additions into data/sites.json
+- Removed dependency on old sites-additions JSON patch files
+- Updated index.html to reference only the active cleaned modules
+- Version tag now matches the build in HTML and JS
 
-Notes:
-- The key is stored locally in that device/browser only.
-- Keep your existing campsite data file in place, usually data/sites.json.
-- This package does not hardcode the key.
-- If no key is entered, the map falls back to OpenStreetMap.
-
-
-v20.3.6 fixes: hidden overlays truly hide; saving API keys no longer forces a map redraw; API modal closes normally.
-
-
-v20.3.7 additions: appended more Manistique, Munising-to-Whitefish, and Silver Cliff area campsites and remote-camping anchors to data/sites.json.
+Active files:
+- index.html
+- styles.css
+- manifest.webmanifest
+- js/app-config.js
+- js/app-data.js
+- js/app-summaries.js
+- js/app-basemap.js
+- js/app-ui.js
+- js/app-main.js
+- data/sites.json
