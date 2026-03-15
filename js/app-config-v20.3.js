@@ -1,4 +1,4 @@
-const VERSION = 'v20.3.4';
+const VERSION = 'v20.3.5';
 const SITE_DATA_URLS = ['data/sites.json', 'data/site-data.json', 'data/campgrounds.json', 'sites.json'];
 const EXTRA_SITE_DATA_URLS = ['data/sites-additions-v18.5.json', 'data/sites-additions-v18.7.json', 'data/sites-additions-v18.8.json', 'data/sites-additions-v18.9.json', 'data/sites-additions-v19.0.json', 'data/sites-additions-v20.3.json'];
 const TRAIL_GEOJSON_URLS = [];
@@ -114,8 +114,10 @@ const els = {
   tfApiKeyInput: document.getElementById('tfApiKeyInput'),
   saveTfKeyBtn: document.getElementById('saveTfKeyBtn'),
   clearTfKeyBtn: document.getElementById('clearTfKeyBtn'),
+  manageApisBtn: document.getElementById('manageApisBtn'),
+  apiModal: document.getElementById('apiModal'),
+  closeApiModalBtn: document.getElementById('closeApiModalBtn'),
   keySection: document.getElementById('keySection'),
-  revealKeySectionBtn: document.getElementById('revealKeySectionBtn'),
   basemapSelect: document.getElementById('basemapSelect'),
   toggleTerrain: document.getElementById('toggleTerrain'),
   togglePitch: document.getElementById('togglePitch'),
@@ -167,5 +169,8 @@ const model = {
   },
   searchAbortController: null,
   locateMarker: null,
-  locateWatchId: null
+  locateWatchId: null,
+  styleSequence: 0,
+  popupHandlersBound: false,
+  cursorHandlersBound: false
 };

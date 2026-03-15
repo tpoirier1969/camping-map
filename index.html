@@ -57,6 +57,7 @@
         </select>
         <label class="switch-row"><input type="checkbox" id="toggleTerrain"> 3D terrain</label>
         <label class="switch-row"><input type="checkbox" id="togglePitch"> Tilt camera when 3D is on</label>
+        <button id="manageApisBtn" class="ghost-button" type="button">Manage APIs</button>
       </section>
 
       <section class="panel-section">
@@ -82,23 +83,33 @@
         <div id="summaryLegendKey" class="summary-key" aria-label="Summary circle legend"></div>
       </section>
 
-      <section class="panel-section key-section" id="keySection">
-        <h2>Map engine</h2>
-        <p class="note">MapTiler powers Outdoor, Satellite Hybrid, Topo and 3D terrain. Thunderforest uses its own separate API key.</p>
-        <label class="field-label" for="apiKeyInput">MapTiler API key</label>
-        <div class="key-row">
-          <input id="apiKeyInput" name="maptilerApiKey" type="password" placeholder="Paste key here" autocomplete="off">
-          <button id="saveKeyBtn" class="ghost-button" type="button">Save</button>
-          <button id="clearKeyBtn" class="ghost-button" type="button">Clear</button>
+      <div id="apiModal" class="modal-overlay" hidden>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="apiModalTitle">
+          <div class="panel-header modal-header">
+            <div>
+              <h2 id="apiModalTitle">Manage APIs</h2>
+              <p class="note">Save keys for the map services you want to use in this project.</p>
+            </div>
+            <button id="closeApiModalBtn" class="ghost-button" aria-label="Close API manager" type="button">✕</button>
+          </div>
+          <section class="panel-section key-section" id="keySection">
+            <h2>Map providers</h2>
+            <p class="note">MapTiler powers Outdoor, Satellite Hybrid, Topo and 3D terrain. Thunderforest powers its own Outdoors and Landscape styles. More providers can be added here later.</p>
+            <label class="field-label" for="apiKeyInput">MapTiler API key</label>
+            <div class="key-row">
+              <input id="apiKeyInput" name="maptilerApiKey" type="password" placeholder="Paste MapTiler key here" autocomplete="off">
+              <button id="saveKeyBtn" class="ghost-button" type="button">Save</button>
+              <button id="clearKeyBtn" class="ghost-button" type="button">Clear</button>
+            </div>
+            <label class="field-label" for="tfApiKeyInput">Thunderforest API key</label>
+            <div class="key-row">
+              <input id="tfApiKeyInput" name="thunderforestApiKey" type="password" placeholder="Paste Thunderforest key here" autocomplete="off">
+              <button id="saveTfKeyBtn" class="ghost-button" type="button">Save</button>
+              <button id="clearTfKeyBtn" class="ghost-button" type="button">Clear</button>
+            </div>
+          </section>
         </div>
-        <label class="field-label" for="tfApiKeyInput">Thunderforest API key (optional)</label>
-        <div class="key-row">
-          <input id="tfApiKeyInput" name="thunderforestApiKey" type="password" placeholder="Paste Thunderforest key here" autocomplete="off">
-          <button id="saveTfKeyBtn" class="ghost-button" type="button">Save</button>
-          <button id="clearTfKeyBtn" class="ghost-button" type="button">Clear</button>
-        </div>
-      </section>
-      <button id="revealKeySectionBtn" class="ghost-button" type="button" hidden>Map key saved — manage</button>
+      </div>
     </aside>
   </div>
 

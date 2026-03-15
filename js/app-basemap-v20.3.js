@@ -1,3 +1,86 @@
+
+function beginStyleReadyWatch(onReady) {
+  if (!model.map) return () => {};
+  const map = model.map;
+  const seq = ++model.styleSequence;
+  let finished = false;
+  let pollId = null;
+  let timeoutId = null;
+
+  const cleanup = () => {
+    if (pollId) window.clearInterval(pollId);
+    if (timeoutId) window.clearTimeout(timeoutId);
+    map.off('style.load', handleStyleLoad);
+    map.off('styledata', handleStyleData);
+    map.off('idle', handleIdle);
+    map.off('load', handleLoad);
+    map.off('error', handleError);
+  };
+
+  const finish = () => {
+    if (finished || seq !== model.styleSequence) return;
+    finished = true;
+    cleanup();
+    onReady();
+  };
+
+  const styleLooksReady = () => {
+    try {
+      if (typeof map.isStyleLoaded === 'function' && map.isStyleLoaded()) return true;
+    } catch {}
+    try {
+      const style = map.getStyle?.();
+      return Boolean(style && style.layers && style.sources);
+    } catch {}
+    return false;
+  };
+
+  const handleStyleLoad = () => finish();
+  const handleStyleData = () => { if (styleLooksReady()) finish(); };
+  const handleIdle = () => { if (styleLooksReady()) finish(); };
+  const handleLoad = () => { if (styleLooksReady()) finish(); };
+  const handleError = () => { if (styleLooksReady()) finish(); };
+
+  map.on('style.load', handleStyleLoad);
+  map.on('styledata', handleStyleData);
+  map.on('idle', handleIdle);
+  map.on('load', handleLoad);
+  map.on('error', handleError);
+
+  queueMicrotask(() => { if (styleLooksReady()) finish(); });
+  pollId = window.setInterval(() => { if (styleLooksReady()) finish(); }, 120);
+  timeoutId = window.setTimeout(() => finish(), 5000);
+
+  return cleanup;
+}
+
+function handleStyleReadyAfterBuild({ center, zoom, pitch, bearing, context = 'rebuild' } = {}) {
+  model.styleReady = true;
+  try {
+    if (model.hasApiKey && model.terrainEnabled && ['satellite','topo','outdoor'].includes(model.mapStyleMode)) {
+      try { model.map.enableTerrain(); } catch {}
+    }
+    applyOverlaySourcesAndLayers();
+    attachPopupHandlers();
+    if (context === 'init') attachCursorStates();
+    if (center && Number.isFinite(zoom)) model.map.jumpTo({ center, zoom, pitch, bearing });
+    setRotationInteractions();
+    applyPitch();
+    updateOverlays();
+    scheduleMarkerRefresh();
+    refreshBasemapUiState();
+    refreshStatusText();
+    updateZoomReadout();
+  } catch (error) {
+    console.error(context === 'init' ? 'Overlay setup failed' : 'Rebuild overlay setup failed', error);
+    if (els.statusText) els.statusText.textContent = context === 'init'
+      ? 'Map style loaded, but an overlay step failed. The map should still be usable.'
+      : 'Basemap changed, but an overlay step failed. The map should still be usable.';
+  } finally {
+    setLoadingState(false);
+  }
+}
+
 function buildMapTilerStyleUrl(styleId) {
   const key = getSavedApiKey();
   if (!key) return null;
@@ -118,28 +201,12 @@ async function rebuildMapStyle() {
   clearSummaryDomMarkers();
   if (model.hasApiKey) maptilersdk.config.apiKey = getSavedApiKey();
   setLoadingState(true, 'Rebuilding map style…');
-  model.map.setStyle(mapStyleForMode());
-  model.map.once('style.load', () => {
-    model.styleReady = true;
-    try {
-      if (model.hasApiKey && model.terrainEnabled && ['satellite','topo','outdoor'].includes(model.mapStyleMode)) {
-        try { model.map.enableTerrain(); } catch {}
-      }
-      applyOverlaySourcesAndLayers();
-      attachPopupHandlers();
-      model.map.jumpTo({ center, zoom, pitch, bearing });
-      setRotationInteractions();
-      applyPitch();
-      updateOverlays();
-      scheduleMarkerRefresh();
-      refreshBasemapUiState();
-      refreshStatusText();
-      updateZoomReadout();
-    } catch (error) {
-      console.error('Rebuild overlay setup failed', error);
-      if (els.statusText) els.statusText.textContent = 'Basemap changed, but an overlay step failed. The map should still be usable.';
-    } finally {
-      setLoadingState(false);
-    }
-  });
+  beginStyleReadyWatch(() => handleStyleReadyAfterBuild({ center, zoom, pitch, bearing, context: 'rebuild' }));
+  try {
+    model.map.setStyle(mapStyleForMode());
+  } catch (error) {
+    console.error('setStyle failed', error);
+    if (els.statusText) els.statusText.textContent = 'Basemap style change failed.';
+    setLoadingState(false);
+  }
 }

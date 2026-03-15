@@ -18,7 +18,8 @@ function popupHtmlForDraft(feature) {
 }
 
 function attachPopupHandlers() {
-  if (!model.map) return;
+  if (!model.map || model.popupHandlersBound) return;
+  model.popupHandlersBound = true;
   model.map.on('click', 'sites-circles', (event) => {
     const feature = event.features?.[0];
     if (!feature) return;
@@ -156,6 +157,8 @@ function applyOverlaySourcesAndLayers() {
 }
 
 function attachCursorStates() {
+  if (model.cursorHandlersBound || !model.map) return;
+  model.cursorHandlersBound = true;
   ['sites-circles', 'state-summary-circles', 'draft-circle'].forEach((layerId) => {
     if (!model.map.getLayer(layerId)) return;
     model.map.on('mouseenter', layerId, () => { model.map.getCanvas().style.cursor = 'pointer'; });
@@ -280,29 +283,7 @@ function initMap() {
   model.map.addControl(new maptilersdk.NavigationControl({ visualizePitch: true }), 'bottom-right');
   model.map.addControl(new maptilersdk.ScaleControl({ unit: 'imperial' }), 'bottom-left');
 
-  model.map.on('style.load', () => {
-    model.styleReady = true;
-    try {
-      if (model.hasApiKey && model.terrainEnabled && ['satellite','topo','outdoor'].includes(model.mapStyleMode)) {
-        try { model.map.enableTerrain(); } catch {}
-      }
-      applyOverlaySourcesAndLayers();
-      attachPopupHandlers();
-      attachCursorStates();
-      setRotationInteractions();
-      applyPitch();
-      updateOverlays();
-      scheduleMarkerRefresh();
-      refreshBasemapUiState();
-      refreshStatusText();
-      updateZoomReadout();
-    } catch (error) {
-      console.error('Overlay setup failed', error);
-      if (els.statusText) els.statusText.textContent = 'Map style loaded, but an overlay step failed. The map should still be usable.';
-    } finally {
-      setLoadingState(false);
-    }
-  });
+  beginStyleReadyWatch(() => handleStyleReadyAfterBuild({ context: 'init' }));
   model.map.on('moveend', () => { updateZoomReadout(); updateOverlays(); });
   model.map.on('zoom', updateZoomReadout);
   model.map.on('zoomend', () => { updateZoomReadout(); updateOverlays(); });

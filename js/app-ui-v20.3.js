@@ -105,20 +105,31 @@ async function runAreaSearch() {
   }
 }
 
+
+function openApiModal() {
+  if (!els.apiModal) return;
+  els.apiModal.hidden = false;
+  document.body.classList.add('modal-open');
+}
+
+function closeApiModal() {
+  if (!els.apiModal) return;
+  els.apiModal.hidden = true;
+  document.body.classList.remove('modal-open');
+}
+
 function setApiKeyUi() {
   const key = getSavedApiKey();
   const thunderforestKey = getSavedThunderforestKey();
   if (els.apiKeyInput) els.apiKeyInput.value = key;
   if (els.tfApiKeyInput) els.tfApiKeyInput.value = thunderforestKey;
   model.hasApiKey = Boolean(key);
-  if (els.keySection) {
-    els.keySection.hidden = false;
-    els.keySection.classList.toggle('is-collapsed', model.hasApiKey || Boolean(thunderforestKey));
+  if (els.manageApisBtn) {
+    const mt = key ? 'MapTiler saved' : 'MapTiler missing';
+    const tf = thunderforestKey ? 'Thunderforest saved' : 'Thunderforest missing';
+    els.manageApisBtn.textContent = `Manage APIs · ${mt} · ${tf}`;
   }
-  if (els.revealKeySectionBtn) {
-    els.revealKeySectionBtn.hidden = !(model.hasApiKey || Boolean(thunderforestKey));
-    els.revealKeySectionBtn.textContent = (model.hasApiKey || Boolean(thunderforestKey)) ? 'Map keys saved — manage' : 'Map keys';
-  }
+  if (els.keySection) els.keySection.hidden = false;
   refreshBasemapUiState();
 }
 
@@ -167,12 +178,16 @@ function bindUi() {
   ensureBasemapOptions();
   els.menuToggle?.addEventListener('click', () => els.menuPanel.classList.toggle('is-collapsed'));
   els.closeMenu?.addEventListener('click', () => els.menuPanel.classList.add('is-collapsed'));
-  els.revealKeySectionBtn?.addEventListener('click', () => {
-    if (els.keySection) {
-      const willShow = els.keySection.classList.contains('is-collapsed');
-      els.keySection.classList.toggle('is-collapsed', !willShow);
-      if (willShow) els.apiKeyInput?.focus();
-    }
+  els.manageApisBtn?.addEventListener('click', () => {
+    openApiModal();
+    els.apiKeyInput?.focus();
+  });
+  els.closeApiModalBtn?.addEventListener('click', closeApiModal);
+  els.apiModal?.addEventListener('click', (event) => {
+    if (event.target === els.apiModal) closeApiModal();
+  });
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && els.apiModal && !els.apiModal.hidden) closeApiModal();
   });
   els.searchBtn?.addEventListener('click', runAreaSearch);
   els.searchInput?.addEventListener('keydown', (event) => {
