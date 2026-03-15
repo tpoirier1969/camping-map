@@ -126,10 +126,11 @@ function describeAttempts(attempts) {
 }
 
 function refreshStatusText() {
+  const extraLoadNote = model.dataLoad.loadingSiteExtras ? ' Additional site files are still loading in the background.' : '';
   const siteMsg = model.dataLoad.loadingSites
     ? `Loading campsite data… trying ${SITE_DATA_URLS.join(', ')}`
     : model.sites.length
-      ? `Loaded ${model.sites.length} campsites across ${model.layerDefs.size} layers from ${model.dataLoad.sitesUrl || 'an unknown file'}${(model.dataLoad.siteExtrasLoaded || []).length ? ` + ${(model.dataLoad.siteExtrasLoaded || []).length} additions file${(model.dataLoad.siteExtrasLoaded || []).length === 1 ? '' : 's'}` : ''}.`
+      ? `Loaded ${model.sites.length} campsites across ${model.layerDefs.size} layers from ${model.dataLoad.sitesUrl || 'an unknown file'}${(model.dataLoad.siteExtrasLoaded || []).length ? ` + ${(model.dataLoad.siteExtrasLoaded || []).length} additions file${(model.dataLoad.siteExtrasLoaded || []).length === 1 ? '' : 's'}` : ''}.${extraLoadNote}`
       : `No campsite records loaded. Tried: ${describeAttempts(model.dataLoad.sitesAttempted)}`;
 
   const basemapLabel = model.mapStyleMode === 'satellite'

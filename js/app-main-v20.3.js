@@ -93,7 +93,6 @@ function firstLabelLayerId() {
 
 function applyOverlaySourcesAndLayers() {
   const beforeId = firstLabelLayerId();
-  const styleHasGlyphs = Boolean(model.map?.getStyle?.()?.glyphs);
   ensureSource('sites', { type: 'geojson', data: buildSiteGeoJson() });
   ensureSource('state-summaries', { type: 'geojson', data: buildStateSummaryGeoJson() });
   ensureSource('draft-site', { type: 'geojson', data: model.draftFeature ? { type: 'FeatureCollection', features: [model.draftFeature] } : { type: 'FeatureCollection', features: [] } });
@@ -112,13 +111,11 @@ function applyOverlaySourcesAndLayers() {
     }
   }, beforeId);
 
-  if (styleHasGlyphs) {
-    addLayerIfMissing({
-      id: 'state-summary-labels', type: 'symbol', source: 'state-summaries',
-      layout: { 'text-field': ['get', 'summaryLabel'], 'text-size': 11.5, 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'], 'text-offset': [0, 0], 'text-justify': 'center', 'text-anchor': 'center', 'text-line-height': 1.15 },
-      paint: { 'text-color': '#ffffff', 'text-halo-color': 'rgba(0,0,0,0.85)', 'text-halo-width': 1.8 }
-    }, beforeId);
-  }
+  addLayerIfMissing({
+    id: 'state-summary-labels', type: 'symbol', source: 'state-summaries',
+    layout: { 'text-field': ['get', 'summaryLabel'], 'text-size': 11.5, 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'], 'text-offset': [0, 0], 'text-justify': 'center', 'text-anchor': 'center', 'text-line-height': 1.15 },
+    paint: { 'text-color': '#ffffff', 'text-halo-color': 'rgba(0,0,0,0.85)', 'text-halo-width': 1.8 }
+  }, beforeId);
 
   addLayerIfMissing({
     id: 'sites-circles', type: 'circle', source: 'sites',
@@ -274,27 +271,21 @@ function initMap() {
   model.map.addControl(new maptilersdk.ScaleControl({ unit: 'imperial' }), 'bottom-left');
 
   model.map.on('style.load', () => {
-    try {
-      model.styleReady = true;
-      if (model.hasApiKey && model.terrainEnabled && model.mapStyleMode !== 'osm') {
-        try { model.map.enableTerrain(); } catch {}
-      }
-      applyOverlaySourcesAndLayers();
-      attachPopupHandlers();
-      attachCursorStates();
-      setRotationInteractions();
-      applyPitch();
-      updateOverlays();
-      scheduleMarkerRefresh();
-      refreshBasemapUiState();
-      refreshStatusText();
-      updateZoomReadout();
-    } catch (error) {
-      console.error('Map style initialization failed', error);
-      if (els.statusText) els.statusText.textContent = `Map loaded, but overlay setup failed: ${error?.message || error}`;
-    } finally {
-      setLoadingState(false);
+    model.styleReady = true;
+    if (model.hasApiKey && model.terrainEnabled && model.mapStyleMode !== 'osm') {
+      try { model.map.enableTerrain(); } catch {}
     }
+    applyOverlaySourcesAndLayers();
+    attachPopupHandlers();
+    attachCursorStates();
+    setRotationInteractions();
+    applyPitch();
+    updateOverlays();
+    scheduleMarkerRefresh();
+    refreshBasemapUiState();
+    refreshStatusText();
+    updateZoomReadout();
+    setLoadingState(false);
   });
   model.map.on('moveend', () => { updateZoomReadout(); updateOverlays(); });
   model.map.on('zoom', updateZoomReadout);
@@ -341,7 +332,7 @@ function initMap() {
 async function main() {
   bindUi();
   setLoadingState(true, 'Loading data…');
-  window.setTimeout(() => { setLoadingState(false); }, 10000);
+  window.setTimeout(() => { if (model.sites.length || model.styleReady) setLoadingState(false); }, 6000);
   initMap();
   window.campingMapDebug = {
     model,

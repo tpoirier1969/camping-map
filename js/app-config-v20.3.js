@@ -1,6 +1,6 @@
-const VERSION = 'v20.3-test-no-v20.3-extra';
+const VERSION = 'v20.3.3';
 const SITE_DATA_URLS = ['data/sites.json', 'data/site-data.json', 'data/campgrounds.json', 'sites.json'];
-const EXTRA_SITE_DATA_URLS = ['data/sites-additions-v18.5.json', 'data/sites-additions-v18.7.json', 'data/sites-additions-v18.8.json', 'data/sites-additions-v18.9.json', 'data/sites-additions-v19.0.json'];
+const EXTRA_SITE_DATA_URLS = ['data/sites-additions-v18.5.json', 'data/sites-additions-v18.7.json', 'data/sites-additions-v18.8.json', 'data/sites-additions-v18.9.json', 'data/sites-additions-v19.0.json', 'data/sites-additions-v20.3.json'];
 const TRAIL_GEOJSON_URLS = [];
 const TRAIL_VECTOR_MANIFEST_URLS = [];
 const DEFAULT_CENTER = [-87.4, 46.6];

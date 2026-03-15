@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#133b2c">
   <title>Camping Map</title>
@@ -37,7 +36,7 @@
         <h2>Find an area</h2>
         <label class="field-label" for="searchInput">Search place or coordinates</label>
         <div class="search-row">
-          <input id="searchInput" name="search" type="text" placeholder="City, park, address, or lat, lng">
+          <input id="searchInput" type="text" placeholder="City, park, address, or lat, lng">
           <button id="searchBtn" class="ghost-button" type="button">Go</button>
         </div>
 <p id="searchStatus" class="note" aria-live="polite"></p>
@@ -47,14 +46,14 @@
       <section class="panel-section">
         <h2>Basemap</h2>
         <label class="field-label" for="basemapSelect">Map style</label>
-        <select id="basemapSelect" name="basemap">
+        <select id="basemapSelect">
           <option value="outdoor">Outdoor</option>
           <option value="satellite">Satellite</option>
           <option value="topo">Topo</option>
           <option value="osm">OpenStreetMap fallback</option>
         </select>
-        <label class="switch-row"><input type="checkbox" id="toggleTerrain" name="terrain"> 3D terrain</label>
-        <label class="switch-row"><input type="checkbox" id="togglePitch" name="pitch"> Tilt camera when 3D is on</label>
+        <label class="switch-row"><input type="checkbox" id="toggleTerrain"> 3D terrain</label>
+        <label class="switch-row"><input type="checkbox" id="togglePitch"> Tilt camera when 3D is on</label>
       </section>
 
       <section class="panel-section">
@@ -64,7 +63,7 @@
 
       <section class="panel-section">
         <h2>Add a site</h2>
-        <label class="switch-row"><input type="checkbox" id="toggleAddMode" name="addMode"> Tap map to drop a draft pin</label>
+        <label class="switch-row"><input type="checkbox" id="toggleAddMode"> Tap map to drop a draft pin</label>
         <p class="note">Enable this and tap once, or long-press the map.</p>
       </section>
 
@@ -75,8 +74,8 @@
 
       <section class="panel-section">
         <h2>Display behavior</h2>
-        <label class="switch-row"><input type="checkbox" id="toggleStateSummaries" name="stateSummaries" checked> State summary symbols when zoomed out</label>
-        <label class="switch-row"><input type="checkbox" id="toggleSitePoints" name="sitePoints" checked> Individual campsite symbols when zoomed in</label>
+        <label class="switch-row"><input type="checkbox" id="toggleStateSummaries" checked> State summary symbols when zoomed out</label>
+        <label class="switch-row"><input type="checkbox" id="toggleSitePoints" checked> Individual campsite symbols when zoomed in</label>
         <div id="summaryLegendKey" class="summary-key" aria-label="Summary circle legend"></div>
       </section>
 
@@ -85,7 +84,7 @@
         <p class="note">Outdoor, Satellite, Topo, and 3D terrain need a MapTiler API key.</p>
         <label class="field-label" for="apiKeyInput">MapTiler API key</label>
         <div class="key-row">
-          <input id="apiKeyInput" name="apiKey" type="password" placeholder="Paste key here">
+          <input id="apiKeyInput" type="password" placeholder="Paste key here">
           <button id="saveKeyBtn" class="ghost-button" type="button">Save</button>
           <button id="clearKeyBtn" class="ghost-button" type="button">Clear</button>
         </div>

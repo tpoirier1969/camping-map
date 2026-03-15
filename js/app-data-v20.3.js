@@ -671,29 +671,22 @@ function normalizeSiteArray(sitesRaw) {
 }
 
 async function loadAllAvailableSiteArrays(urls, target = 'siteExtras') {
-  const results = await Promise.all(urls.map((url) => fetchJsonWithTimeout(url, 3500)));
-  const attempts = results.map((result) => ({ url: result.url, ok: result.ok, status: result.status, reason: result.reason || '' }));
-  const loaded = results.filter((result) => result.ok).map((result) => ({ url: result.url, json: result.json }));
+  const loaded = [];
+  const attempts = [];
+  for (const url of urls) {
+    const result = await fetchJsonWithTimeout(url, 3500);
+    attempts.push({ url: result.url, ok: result.ok, status: result.status, reason: result.reason || '' });
+    if (result.ok) loaded.push({ url: result.url, json: result.json });
+  }
   model.dataLoad[`${target}Attempted`] = attempts;
   model.dataLoad[`${target}Loaded`] = loaded.map((entry) => entry.url);
   return loaded;
 }
 
-function applyNormalizedSites(siteRows) {
-  model.sites = siteRows.map(normalizeSite).filter(Boolean);
-  buildLayerDefinitions();
-  buildStateGroups();
-  renderLayerControls();
-  renderLegend();
-  renderSummaryLegendKey();
-  syncTrailUi();
-  if (model.map && model.styleReady) updateOverlays();
-  refreshStatusText();
-}
-
 async function loadData() {
   model.dataLoad.loadingSites = true;
   model.dataLoad.loadingTrails = true;
+  model.dataLoad.loadingSiteExtras = EXTRA_SITE_DATA_URLS.length > 0;
   setLoadingState?.(true, 'Loading campsite data…');
   model.dataLoad.sitesAttempted = [];
   model.dataLoad.trailsAttempted = [];
@@ -701,8 +694,7 @@ async function loadData() {
   model.dataLoad.trailsError = '';
   refreshStatusText();
 
-  const extrasPromise = loadAllAvailableSiteArrays(EXTRA_SITE_DATA_URLS, 'siteExtras');
-  const trailsPromise = loadTrailData().finally(() => {
+  const trailPromise = loadTrailData().finally(() => {
     model.dataLoad.loadingTrails = false;
     refreshStatusText();
   });
@@ -712,17 +704,46 @@ async function loadData() {
     refreshStatusText();
   });
 
-  applyNormalizedSites(normalizeSiteArray(sitesRaw));
+  const baseSitesRaw = normalizeSiteArray(sitesRaw);
+  model.sites = baseSitesRaw.map(normalizeSite).filter(Boolean);
+
+  buildLayerDefinitions();
+  buildStateGroups();
+  renderLayerControls();
+  renderLegend();
+  renderSummaryLegendKey();
+  syncTrailUi();
+
+  if (model.map && model.styleReady) {
+    updateOverlays();
+  }
+  refreshStatusText();
   setLoadingState?.(false);
 
-  const [extraSiteArrays] = await Promise.all([extrasPromise, trailsPromise]).then((results) => [results[0]]);
-  if (extraSiteArrays?.length) {
-    const mergedSitesRaw = [
-      ...normalizeSiteArray(sitesRaw),
-      ...extraSiteArrays.flatMap((entry) => normalizeSiteArray(entry.json))
-    ];
-    applyNormalizedSites(mergedSitesRaw);
-  }
+  loadAllAvailableSiteArrays(EXTRA_SITE_DATA_URLS, 'siteExtras')
+    .then((extraSiteArrays) => {
+      const mergedSitesRaw = [
+        ...baseSitesRaw,
+        ...extraSiteArrays.flatMap((entry) => normalizeSiteArray(entry.json))
+      ];
+      model.sites = mergedSitesRaw.map(normalizeSite).filter(Boolean);
+      model.dataLoad.loadingSiteExtras = false;
+      buildLayerDefinitions();
+      buildStateGroups();
+      renderLayerControls();
+      renderLegend();
+      renderSummaryLegendKey();
+      syncTrailUi();
+      if (model.map && model.styleReady) updateOverlays();
+      refreshStatusText();
+    })
+    .catch((error) => {
+      console.error(error);
+      model.dataLoad.loadingSiteExtras = false;
+      refreshStatusText();
+    });
+
+  await trailPromise;
 }
 
 
