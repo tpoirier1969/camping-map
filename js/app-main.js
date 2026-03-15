@@ -13,29 +13,8 @@ function popupHtmlForState(props) {
 
 function popupHtmlForDraft(feature) {
   const [lng, lat] = feature.geometry.coordinates;
-  return `<div class="popup-content">
-    <div class="popup-title">Draft site pin</div>
-    <div class="popup-meta">${lat.toFixed(6)}, ${lng.toFixed(6)}</div>
-    <div class="draft-form-grid">
-      <input id="draftNameInput" type="text" placeholder="Site name">
-      <select id="draftCategorySelect">
-        <option value="boondocking">Boondocking</option>
-        <option value="state">State campground</option>
-        <option value="federal">Federal campground</option>
-        <option value="private">Private campground</option>
-        <option value="local">Local campground</option>
-        <option value="info">Info / reference</option>
-      </select>
-      <input id="draftStateInput" type="text" placeholder="State (example: MI)">
-      <input id="draftWebsiteInput" type="text" placeholder="Website URL">
-      <input id="draftAmenitiesInput" type="text" placeholder="Amenities (comma separated)">
-      <textarea id="draftNotesInput" placeholder="Notes"></textarea>
-    </div>
-    <div class="popup-actions">
-      <button type="button" id="appendDraftBtn">Append to queue</button>
-      <button type="button" id="copyDraftBtn">Copy JSON</button>
-    </div>
-  </div>`;
+  const snippet = JSON.stringify({ name: 'New site', category: 'boondocking', state: '', lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), notes: '' }, null, 2);
+  return `<div class="popup-content"><div class="popup-title">Draft site pin</div><div class="popup-meta">${lat.toFixed(6)}, ${lng.toFixed(6)}</div><div>Copy this into your dataset:</div><pre style="white-space:pre-wrap;max-width:280px;">${escapeHtml(snippet)}</pre><div class="popup-actions"><button type="button" id="copyDraftBtn">Copy JSON</button></div></div>`;
 }
 
 function attachPopupHandlers() {
@@ -69,7 +48,18 @@ function attachPopupHandlers() {
   model.map.on('click', 'draft-circle', (event) => {
     const feature = event.features?.[0];
     if (!feature) return;
-    openDraftPopup(feature.geometry.coordinates, feature);
+    const popup = new maptilersdk.Popup({ closeButton: true, maxWidth: '360px' })
+      .setLngLat(feature.geometry.coordinates)
+      .setHTML(popupHtmlForDraft(feature))
+      .addTo(model.map);
+    popup.on('open', () => {
+      const btn = popup.getElement().querySelector('#copyDraftBtn');
+      btn?.addEventListener('click', async () => {
+        const [lng, lat] = feature.geometry.coordinates;
+        const text = JSON.stringify({ name: 'New site', category: 'boondocking', state: '', lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), notes: '' }, null, 2);
+        try { await navigator.clipboard.writeText(text); btn.textContent = 'Copied'; } catch { btn.textContent = 'Copy failed'; }
+      }, { once: true });
+    });
   });
 }
 
@@ -240,69 +230,6 @@ function renderSummaryMarkers() {
   }
 }
 
-
-function buildDraftRecordFromPopup(feature, rootEl) {
-  const [lng, lat] = feature.geometry.coordinates;
-  const amenitiesRaw = rootEl.querySelector('#draftAmenitiesInput')?.value || '';
-  return {
-    name: (rootEl.querySelector('#draftNameInput')?.value || 'New site').trim(),
-    category: (rootEl.querySelector('#draftCategorySelect')?.value || 'boondocking').trim(),
-    state: (rootEl.querySelector('#draftStateInput')?.value || '').trim(),
-    website: (rootEl.querySelector('#draftWebsiteInput')?.value || '').trim(),
-    amenities: amenitiesRaw.split(',').map((v) => v.trim()).filter(Boolean),
-    notes: (rootEl.querySelector('#draftNotesInput')?.value || '').trim(),
-    lat: Number(lat.toFixed(6)),
-    lng: Number(lng.toFixed(6))
-  };
-}
-
-async function copyDraftRecord(record, btn) {
-  const text = JSON.stringify(record);
-  try {
-    await navigator.clipboard.writeText(text);
-    if (btn) btn.textContent = 'Copied';
-    refreshDraftQueueUi('Draft JSON copied.');
-  } catch (error) {
-    console.error(error);
-    if (btn) btn.textContent = 'Copy failed';
-    refreshDraftQueueUi('Copy failed on this device.');
-  }
-}
-
-function appendDraftRecord(record) {
-  model.manualDraftQueue.push(JSON.stringify(record));
-  saveManualDraftQueue();
-  refreshDraftQueueUi('Draft appended to queue.');
-  model.draftFeature = null;
-  updateOverlays();
-  closeActivePopup();
-}
-
-function openDraftPopup(lngLat, feature) {
-  closeActivePopup();
-  const popup = new maptilersdk.Popup({ closeButton: true, maxWidth: '360px' })
-    .setLngLat(lngLat)
-    .setHTML(popupHtmlForDraft(feature))
-    .addTo(model.map);
-  popup.on('open', () => {
-    const rootEl = popup.getElement();
-    const appendBtn = rootEl.querySelector('#appendDraftBtn');
-    const copyBtn = rootEl.querySelector('#copyDraftBtn');
-    appendBtn?.addEventListener('click', () => {
-      const record = buildDraftRecordFromPopup(feature, rootEl);
-      appendDraftRecord(record);
-    });
-    copyBtn?.addEventListener('click', () => {
-      const record = buildDraftRecordFromPopup(feature, rootEl);
-      copyDraftRecord(record, copyBtn);
-    });
-  });
-  popup.on('close', () => {
-    if (model.activePopup === popup) model.activePopup = null;
-  });
-  model.activePopup = popup;
-}
-
 function closeActivePopup() {
   if (!model.activePopup) return;
   try { model.activePopup.remove(); } catch {}
@@ -389,7 +316,7 @@ function updateOverlays() {
 function setDraftAt(lngLat) {
   model.draftFeature = { type: 'Feature', properties: { name: 'Draft site' }, geometry: { type: 'Point', coordinates: [lngLat.lng, lngLat.lat] } };
   updateOverlays();
-  openDraftPopup([lngLat.lng, lngLat.lat], model.draftFeature);
+  openSitePopup([lngLat.lng, lngLat.lat], popupHtmlForDraft(model.draftFeature));
 }
 
 function initMap() {

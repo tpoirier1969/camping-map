@@ -313,12 +313,3 @@ body.modal-open { overflow: hidden; }
   .key-row, .search-row, .action-row.compact-row { grid-template-columns: 1fr; }
   .counts-grid { grid-template-columns: 1fr 1fr; }
 }
-
-
-[hidden]{display:none !important;}
-.draft-queue-text{width:100%;min-height:150px;resize:vertical;background:#10261d;color:#eef6f0;border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:10px;font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;}
-.draft-form-grid{display:grid;gap:8px;}
-.draft-form-grid input,.draft-form-grid select,.draft-form-grid textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(0,0,0,.18);font:inherit;}
-.draft-form-grid textarea{min-height:72px;resize:vertical;}
-.popup-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
-.popup-actions button{padding:7px 10px;border-radius:8px;border:1px solid rgba(0,0,0,.2);background:#f3f3f3;cursor:pointer;}
