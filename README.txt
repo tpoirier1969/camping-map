@@ -15,3 +15,9 @@ Notes:
 - Keep your existing campsite data file in place, usually data/sites.json.
 - This package does not hardcode the key.
 - If no key is entered, the map falls back to OpenStreetMap.
+
+
+v20.3.6 fixes: hidden overlays truly hide; saving API keys no longer forces a map redraw; API modal closes normally.
+
+
+v20.3.7 additions: appended more Manistique, Munising-to-Whitefish, and Silver Cliff area campsites and remote-camping anchors to data/sites.json.

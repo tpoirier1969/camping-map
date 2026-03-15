@@ -3153,8 +3153,8 @@
     "sourceFolder": "State, county, and town Campgrounds",
     "lat": 46.6678909,
     "lng": -85.7533283,
-    "description": "",
-    "website": ""
+    "description": "Official Michigan state forest campground page added. Rustic campground on Blind Sucker Flooding with hand-pump well and vault toilet.",
+    "website": "https://www.michigan.gov/recsearch/sfcampgroundsa-m/blindsucker2"
   },
   {
     "id": "s287",
@@ -3582,8 +3582,8 @@
     "sourceFolder": "State, county, and town Campgrounds",
     "lat": 46.6948343,
     "lng": -85.3589905,
-    "description": "",
-    "website": ""
+    "description": "Official Michigan state forest campground page added. Rustic campground with hand-pump well and North Country Trail access.",
+    "website": "https://www.michigan.gov/recsearch/sfcampgroundsa-m/culhanelake"
   },
   {
     "id": "s326",
@@ -4625,10 +4625,10 @@
     "category": "public",
     "categoryLabel": "State / County / Town",
     "sourceFolder": "State, county, and town Campgrounds",
-    "lat": 46.5855928,
-    "lng": -86.2267463,
-    "description": "",
-    "website": ""
+    "lat": 46.58466885,
+    "lng": -86.22650966,
+    "description": "Official Michigan state forest campground page added. Rustic campground with hand-pump well, vault toilet, and nearby Trail 8 ORV access.",
+    "website": "https://www.michigan.gov/recsearch/sfcampgroundsa-m/kingstonlake"
   },
   {
     "id": "s421",
@@ -4737,8 +4737,8 @@
     "sourceFolder": "State, county, and town Campgrounds",
     "lat": 46.6768145,
     "lng": -85.7559713,
-    "description": "",
-    "website": ""
+    "description": "Official Michigan state forest campground page added. Rustic shoreline campground on Lake Superior.",
+    "website": "https://www.michigan.gov/recsearch/sfcampgroundsa-m/lakesuperior"
   },
   {
     "id": "s431",
@@ -5771,8 +5771,8 @@
     "sourceFolder": "State, county, and town Campgrounds",
     "lat": 46.2708333,
     "lng": -86.6513889,
-    "description": "",
-    "website": ""
+    "description": "Official Hiawatha National Forest campground page; OHV camping area.",
+    "website": "https://www.fs.usda.gov/r09/hiawatha/recreation/island-lake-campground"
   },
   {
     "id": "s525",
@@ -10490,7 +10490,7 @@
     "sourceFolder": "Boondocking",
     "lat": 46.07203234024005,
     "lng": -86.50164462041236,
-    "description": "Official Hiawatha National Forest Bear Lake page added.",
+    "description": "Official Hiawatha National Forest Bear Lake Campsites page added. Single small campsite; reservations through Columbus Day; no potable water or restrooms.",
     "website": "https://www.fs.usda.gov/r09/hiawatha/recreation/bear-lake-campsites"
   },
   {
@@ -10525,5 +10525,159 @@
     "description": "User-provided named state site. No amenities.",
     "website": "",
     "id": "s956"
+  },
+  {
+    "name": "Camp Cook Campsites",
+    "category": "public",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.0391177,
+    "lng": -86.581667,
+    "description": "Official Hiawatha National Forest campsites page added. Four campsites near the Fishdam River; restroom available.",
+    "website": "https://www.fs.usda.gov/r09/hiawatha/recreation/camp-cook-campsites",
+    "id": "s957"
+  },
+  {
+    "name": "East Lake Campsites",
+    "category": "public",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.178469,
+    "lng": -86.413376,
+    "description": "Official Hiawatha National Forest campsites page added. Three primitive campsites; no potable water or restrooms.",
+    "website": "https://www.fs.usda.gov/r09/hiawatha/recreation/east-lake-campsites",
+    "id": "s958"
+  },
+  {
+    "name": "Little Bass Lake Campsites",
+    "category": "public",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.163991,
+    "lng": -86.450297,
+    "description": "Official Hiawatha National Forest campsites page added. Primitive campsite area; no potable water or restrooms.",
+    "website": "https://www.fs.usda.gov/r09/hiawatha/recreation/little-bass-lake-campsites",
+    "id": "s959"
+  },
+  {
+    "name": "Bass Lake Campsites",
+    "category": "public",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.1723,
+    "lng": -86.4651,
+    "description": "Official Hiawatha National Forest campsites page added. Small primitive campsite area with restroom; no potable water.",
+    "website": "https://www.fs.usda.gov/r09/hiawatha/recreation/bass-lake-campsites",
+    "id": "s960"
+  },
+  {
+    "name": "Minerva Lake Campsites",
+    "category": "public",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.144479,
+    "lng": -86.479266,
+    "description": "Official Hiawatha National Forest campsites page added. Primitive campsite area; no potable water or restrooms.",
+    "website": "https://www.fs.usda.gov/r09/hiawatha/recreation/minerva-lake-campsites",
+    "id": "s961"
+  },
+  {
+    "name": "Crooked Lake Campsites",
+    "category": "public",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.21686556,
+    "lng": -86.43164556,
+    "description": "Official Hiawatha National Forest campsites page added. Primitive campsite area; no potable water or restrooms.",
+    "website": "https://www.fs.usda.gov/r09/hiawatha/recreation/crooked-lake-campsites",
+    "id": "s962"
+  },
+  {
+    "name": "Hovey Lake Campsites",
+    "category": "public",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.2905,
+    "lng": -86.7006,
+    "description": "Official Hiawatha National Forest campsites page added. No-fee area with four campsites and OHV camping designation.",
+    "website": "https://www.fs.usda.gov/r09/hiawatha/recreation/hovey-lake-campsites",
+    "id": "s963"
+  },
+  {
+    "name": "Corner Lake Campground",
+    "category": "public",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 46.153047,
+    "lng": -86.6094157,
+    "description": "Official Hiawatha National Forest campground page added. OHV camping area.",
+    "website": "https://www.fs.usda.gov/r09/hiawatha/recreation/corner-lake-campground",
+    "id": "s964"
+  },
+  {
+    "name": "Mouth of Two Hearted River State Forest Campground",
+    "category": "public",
+    "categoryLabel": "State / County / Town",
+    "sourceFolder": "State, county, and town Campgrounds",
+    "lat": 46.69792807,
+    "lng": -85.42224986,
+    "description": "Official Michigan state forest campground page added. Rustic campground at the mouth of the Two Hearted River on Lake Superior.",
+    "website": "https://www.michigan.gov/recsearch/sfcampgroundsa-m/mouthoftwoheartedriver",
+    "id": "s965"
+  },
+  {
+    "name": "Ada Lake Recreation Area",
+    "category": "public",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 45.3696,
+    "lng": -88.7315,
+    "description": "Official Chequamegon-Nicolet National Forest recreation area page added. 19-site campground with potable water and vault toilets.",
+    "website": "https://www.fs.usda.gov/r09/chequamegon-nicolet/recreation/ada-lake-recreation-area",
+    "id": "s967"
+  },
+  {
+    "name": "Richardson Lake Recreation Area",
+    "category": "public",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 45.4415,
+    "lng": -88.7153,
+    "description": "Official Chequamegon-Nicolet National Forest recreation area page added. 26 wooded sites with potable water.",
+    "website": "https://www.fs.usda.gov/r09/chequamegon-nicolet/recreation/richardson-lake-recreation-area",
+    "id": "s968"
+  },
+  {
+    "name": "Boot Lake Recreation Area",
+    "category": "public",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 45.2684,
+    "lng": -88.6456,
+    "description": "Official Chequamegon-Nicolet National Forest recreation area page added. 36-site developed campground with potable water.",
+    "website": "https://www.fs.usda.gov/r09/chequamegon-nicolet/recreation/boot-lake-recreation-area",
+    "id": "s969"
+  },
+  {
+    "name": "Boulder Lake Recreation Area",
+    "category": "public",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 45.1411,
+    "lng": -88.6344,
+    "description": "Official Chequamegon-Nicolet National Forest recreation area page added. Large developed campground with showers, some electric sites, and potable water.",
+    "website": "https://www.fs.usda.gov/r09/chequamegon-nicolet/recreation/boulder-lake-recreation-area",
+    "id": "s970"
+  },
+  {
+    "name": "Bagley Rapids Recreation Area",
+    "category": "public",
+    "categoryLabel": "Federal Campgrounds",
+    "sourceFolder": "Federal Campgrounds",
+    "lat": 45.1575,
+    "lng": -88.4659,
+    "description": "Official Chequamegon-Nicolet National Forest recreation area page added. Campground with potable water near Mountain, Wisconsin.",
+    "website": "https://www.fs.usda.gov/r09/chequamegon-nicolet/recreation/bagley-rapids-recreation-area",
+    "id": "s971"
   }
 ]

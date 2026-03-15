@@ -223,29 +223,29 @@ function bindUi() {
       applyPitch();
     });
   }
-  els.saveKeyBtn?.addEventListener('click', async () => {
+  els.saveKeyBtn?.addEventListener('click', () => {
     localStorage.setItem(STORAGE_KEYS.apiKey, (els.apiKeyInput?.value || '').trim());
     setApiKeyUi();
     refreshStatusText();
-    await rebuildMapStyle();
+    closeApiModal();
   });
-  els.clearKeyBtn?.addEventListener('click', async () => {
+  els.clearKeyBtn?.addEventListener('click', () => {
     localStorage.removeItem(STORAGE_KEYS.apiKey);
     setApiKeyUi();
     refreshStatusText();
-    await rebuildMapStyle();
+    closeApiModal();
   });
-  els.saveTfKeyBtn?.addEventListener('click', async () => {
+  els.saveTfKeyBtn?.addEventListener('click', () => {
     localStorage.setItem(STORAGE_KEYS.thunderforestApiKey, (els.tfApiKeyInput?.value || '').trim());
     setApiKeyUi();
     refreshStatusText();
-    await rebuildMapStyle();
+    closeApiModal();
   });
-  els.clearTfKeyBtn?.addEventListener('click', async () => {
+  els.clearTfKeyBtn?.addEventListener('click', () => {
     localStorage.removeItem(STORAGE_KEYS.thunderforestApiKey);
     setApiKeyUi();
     refreshStatusText();
-    await rebuildMapStyle();
+    closeApiModal();
   });
 }
 
