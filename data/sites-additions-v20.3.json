@@ -208,44 +208,5 @@
     "description": "Primitive waterfront overnight spot in the St. Ignace area used as a boondocking-style site.",
     "cost": "Free",
     "showers": "No"
-  },
-  {
-    "id": "v20-3-up-boon-16-whitefish-river-user",
-    "name": "Whitefish River Site",
-    "latitude": 46.09043141144254,
-    "longitude": -86.84924825917933,
-    "state": "MI",
-    "owner": "User-provided",
-    "layerLabel": "Boondocking",
-    "category": "boondocking",
-    "description": "User-provided boondocking site on the Whitefish River. No amenities.",
-    "cost": "",
-    "showers": "No"
-  },
-  {
-    "id": "v20-3-up-boon-17-escanaba-river-user",
-    "name": "Escanaba River Site",
-    "latitude": 46.14544310151374,
-    "longitude": -87.42433039567379,
-    "state": "MI",
-    "owner": "User-provided",
-    "layerLabel": "Boondocking",
-    "category": "boondocking",
-    "description": "User-provided boondocking site on the Escanaba River. No amenities.",
-    "cost": "",
-    "showers": "No"
-  },
-  {
-    "id": "v20-3-up-state-18-west-branch-state-forest-campground-user",
-    "name": "West Branch State Forest Campground",
-    "latitude": 46.18731712595539,
-    "longitude": -87.74713141313383,
-    "state": "MI",
-    "owner": "Michigan DNR / user-provided location",
-    "layerLabel": "State Campgrounds",
-    "category": "state campground",
-    "description": "Named state campground site supplied by user. No amenities.",
-    "cost": "",
-    "showers": "No"
   }
 ]

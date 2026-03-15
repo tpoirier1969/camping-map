@@ -625,13 +625,8 @@ async function fetchJsonWithTimeout(url, timeoutMs = 8000) {
     if (!response.ok) {
       return { ok: false, url, status: response.status, reason: `HTTP ${response.status}` };
     }
-    const rawText = await response.text();
-    try {
-      const json = JSON.parse(rawText);
-      return { ok: true, url, status: response.status, json };
-    } catch (error) {
-      return { ok: false, url, status: response.status, reason: `Bad JSON: ${error?.message || 'parse failed'}` };
-    }
+    const json = await response.json();
+    return { ok: true, url, status: response.status, json };
   } catch (error) {
     const reason = error?.name === 'AbortError' ? `Timed out after ${timeoutMs} ms` : (error?.message || 'Fetch failed');
     return { ok: false, url, status: 0, reason };
@@ -676,13 +671,24 @@ function normalizeSiteArray(sitesRaw) {
 }
 
 async function loadAllAvailableSiteArrays(urls, target = 'siteExtras') {
-  const results = await Promise.all(urls.map((url) => fetchJsonWithTimeout(url, 3000)));
+  const results = await Promise.all(urls.map((url) => fetchJsonWithTimeout(url, 3500)));
   const attempts = results.map((result) => ({ url: result.url, ok: result.ok, status: result.status, reason: result.reason || '' }));
   const loaded = results.filter((result) => result.ok).map((result) => ({ url: result.url, json: result.json }));
   model.dataLoad[`${target}Attempted`] = attempts;
   model.dataLoad[`${target}Loaded`] = loaded.map((entry) => entry.url);
-  refreshStatusText();
   return loaded;
+}
+
+function applyNormalizedSites(siteRows) {
+  model.sites = siteRows.map(normalizeSite).filter(Boolean);
+  buildLayerDefinitions();
+  buildStateGroups();
+  renderLayerControls();
+  renderLegend();
+  renderSummaryLegendKey();
+  syncTrailUi();
+  if (model.map && model.styleReady) updateOverlays();
+  refreshStatusText();
 }
 
 async function loadData() {
@@ -695,49 +701,27 @@ async function loadData() {
   model.dataLoad.trailsError = '';
   refreshStatusText();
 
-  try {
-    const [sitesRaw, extraSiteArrays] = await Promise.all([
-      loadFirstAvailable(SITE_DATA_URLS, 'sites').finally(() => {
-        model.dataLoad.loadingSites = false;
-        refreshStatusText();
-      }),
-      loadAllAvailableSiteArrays(EXTRA_SITE_DATA_URLS, 'siteExtras'),
-      loadTrailData().finally(() => {
-        model.dataLoad.loadingTrails = false;
-        refreshStatusText();
-      })
-    ]).then((results) => [results[0], results[1]]);
+  const extrasPromise = loadAllAvailableSiteArrays(EXTRA_SITE_DATA_URLS, 'siteExtras');
+  const trailsPromise = loadTrailData().finally(() => {
+    model.dataLoad.loadingTrails = false;
+    refreshStatusText();
+  });
 
+  const sitesRaw = await loadFirstAvailable(SITE_DATA_URLS, 'sites').finally(() => {
+    model.dataLoad.loadingSites = false;
+    refreshStatusText();
+  });
+
+  applyNormalizedSites(normalizeSiteArray(sitesRaw));
+  setLoadingState?.(false);
+
+  const [extraSiteArrays] = await Promise.all([extrasPromise, trailsPromise]).then((results) => [results[0]]);
+  if (extraSiteArrays?.length) {
     const mergedSitesRaw = [
       ...normalizeSiteArray(sitesRaw),
       ...extraSiteArrays.flatMap((entry) => normalizeSiteArray(entry.json))
     ];
-
-    model.sites = mergedSitesRaw.map(normalizeSite).filter(Boolean);
-
-    buildLayerDefinitions();
-    buildStateGroups();
-    renderLayerControls();
-    renderLegend();
-    renderSummaryLegendKey();
-    syncTrailUi();
-
-    if (model.map && model.styleReady) {
-      updateOverlays();
-    }
-    refreshStatusText();
-    return model.sites;
-  } catch (error) {
-    console.error('loadData failed', error);
-    if (els.statusText) {
-      els.statusText.textContent = `Data load failed. ${error?.message || 'Unknown error'}`;
-    }
-    throw error;
-  } finally {
-    model.dataLoad.loadingSites = false;
-    model.dataLoad.loadingTrails = false;
-    refreshStatusText();
-    setLoadingState?.(false);
+    applyNormalizedSites(mergedSitesRaw);
   }
 }
 

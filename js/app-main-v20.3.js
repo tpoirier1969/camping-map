@@ -93,6 +93,7 @@ function firstLabelLayerId() {
 
 function applyOverlaySourcesAndLayers() {
   const beforeId = firstLabelLayerId();
+  const styleHasGlyphs = Boolean(model.map?.getStyle?.()?.glyphs);
   ensureSource('sites', { type: 'geojson', data: buildSiteGeoJson() });
   ensureSource('state-summaries', { type: 'geojson', data: buildStateSummaryGeoJson() });
   ensureSource('draft-site', { type: 'geojson', data: model.draftFeature ? { type: 'FeatureCollection', features: [model.draftFeature] } : { type: 'FeatureCollection', features: [] } });
@@ -111,11 +112,13 @@ function applyOverlaySourcesAndLayers() {
     }
   }, beforeId);
 
-  addLayerIfMissing({
-    id: 'state-summary-labels', type: 'symbol', source: 'state-summaries',
-    layout: { 'text-field': ['get', 'summaryLabel'], 'text-size': 11.5, 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'], 'text-offset': [0, 0], 'text-justify': 'center', 'text-anchor': 'center', 'text-line-height': 1.15 },
-    paint: { 'text-color': '#ffffff', 'text-halo-color': 'rgba(0,0,0,0.85)', 'text-halo-width': 1.8 }
-  }, beforeId);
+  if (styleHasGlyphs) {
+    addLayerIfMissing({
+      id: 'state-summary-labels', type: 'symbol', source: 'state-summaries',
+      layout: { 'text-field': ['get', 'summaryLabel'], 'text-size': 11.5, 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'], 'text-offset': [0, 0], 'text-justify': 'center', 'text-anchor': 'center', 'text-line-height': 1.15 },
+      paint: { 'text-color': '#ffffff', 'text-halo-color': 'rgba(0,0,0,0.85)', 'text-halo-width': 1.8 }
+    }, beforeId);
+  }
 
   addLayerIfMissing({
     id: 'sites-circles', type: 'circle', source: 'sites',
@@ -271,21 +274,27 @@ function initMap() {
   model.map.addControl(new maptilersdk.ScaleControl({ unit: 'imperial' }), 'bottom-left');
 
   model.map.on('style.load', () => {
-    model.styleReady = true;
-    if (model.hasApiKey && model.terrainEnabled && model.mapStyleMode !== 'osm') {
-      try { model.map.enableTerrain(); } catch {}
+    try {
+      model.styleReady = true;
+      if (model.hasApiKey && model.terrainEnabled && model.mapStyleMode !== 'osm') {
+        try { model.map.enableTerrain(); } catch {}
+      }
+      applyOverlaySourcesAndLayers();
+      attachPopupHandlers();
+      attachCursorStates();
+      setRotationInteractions();
+      applyPitch();
+      updateOverlays();
+      scheduleMarkerRefresh();
+      refreshBasemapUiState();
+      refreshStatusText();
+      updateZoomReadout();
+    } catch (error) {
+      console.error('Map style initialization failed', error);
+      if (els.statusText) els.statusText.textContent = `Map loaded, but overlay setup failed: ${error?.message || error}`;
+    } finally {
+      setLoadingState(false);
     }
-    applyOverlaySourcesAndLayers();
-    attachPopupHandlers();
-    attachCursorStates();
-    setRotationInteractions();
-    applyPitch();
-    updateOverlays();
-    scheduleMarkerRefresh();
-    refreshBasemapUiState();
-    refreshStatusText();
-    updateZoomReadout();
-    setLoadingState(false);
   });
   model.map.on('moveend', () => { updateZoomReadout(); updateOverlays(); });
   model.map.on('zoom', updateZoomReadout);
@@ -332,12 +341,7 @@ function initMap() {
 async function main() {
   bindUi();
   setLoadingState(true, 'Loading data…');
-  window.setTimeout(() => {
-    if (!model.sites.length && !model.styleReady && els.statusText) {
-      els.statusText.textContent = 'Load guard kicked in. The map may still be usable, but one of the startup steps dragged too long.';
-    }
-    setLoadingState(false);
-  }, 10000);
+  window.setTimeout(() => { setLoadingState(false); }, 10000);
   initMap();
   window.campingMapDebug = {
     model,
@@ -353,18 +357,6 @@ async function main() {
     setLoadingState(false);
   });
 }
-
-window.addEventListener('error', (event) => {
-  console.error('Unhandled startup error', event?.error || event?.message || event);
-  if (els.statusText) els.statusText.textContent = 'A script error interrupted startup. Check the browser console for the exact line.';
-  setLoadingState(false);
-});
-
-window.addEventListener('unhandledrejection', (event) => {
-  console.error('Unhandled promise rejection', event?.reason || event);
-  if (els.statusText) els.statusText.textContent = 'A promise failed during startup. Check the browser console for details.';
-  setLoadingState(false);
-});
 
 main().catch((error) => {
   console.error(error);

@@ -78,20 +78,26 @@ async function rebuildMapStyle() {
   setLoadingState(true, 'Rebuilding map style…');
   model.map.setStyle(mapStyleForMode());
   model.map.once('style.load', () => {
-    model.styleReady = true;
-    if (model.hasApiKey && model.terrainEnabled && model.mapStyleMode !== 'osm') {
-      try { model.map.enableTerrain(); } catch {}
+    try {
+      model.styleReady = true;
+      if (model.hasApiKey && model.terrainEnabled && model.mapStyleMode !== 'osm') {
+        try { model.map.enableTerrain(); } catch {}
+      }
+      applyOverlaySourcesAndLayers();
+      attachPopupHandlers();
+      model.map.jumpTo({ center, zoom, pitch, bearing });
+      setRotationInteractions();
+      applyPitch();
+      updateOverlays();
+      scheduleMarkerRefresh();
+      refreshBasemapUiState();
+      refreshStatusText();
+      updateZoomReadout();
+    } catch (error) {
+      console.error('Map style rebuild failed', error);
+      if (els.statusText) els.statusText.textContent = `Map style rebuilt, but overlay setup failed: ${error?.message || error}`;
+    } finally {
+      setLoadingState(false);
     }
-    applyOverlaySourcesAndLayers();
-    attachPopupHandlers();
-    model.map.jumpTo({ center, zoom, pitch, bearing });
-    setRotationInteractions();
-    applyPitch();
-    updateOverlays();
-    scheduleMarkerRefresh();
-    refreshBasemapUiState();
-    refreshStatusText();
-    updateZoomReadout();
-    setLoadingState(false);
   });
 }

@@ -5711,12 +5711,12 @@
   {
     "id": "s519",
     "name": "Lower Dam Campground",
-    "category": "public",
-    "categoryLabel": "State / County / Town",
+    "category": "state_federal_rustic",
+    "categoryLabel": "State/Federal Rustic",
     "sourceFolder": "State, county, and town Campgrounds",
     "lat": 46.18688685020441,
     "lng": -87.66092363273724,
-    "description": "User-provided named state site. No amenities.",
+    "description": "Named state site; no amenities",
     "website": ""
   },
   {
@@ -10428,58 +10428,80 @@
     "website": ""
   },
   {
+    "name": "Whitefish River Site",
+    "category": "boondocking",
+    "categoryLabel": "Boondocking",
+    "lat": 46.09043141144254,
+    "lng": -86.84924825917933,
+    "description": "No amenities",
     "id": "s948",
+    "sourceFolder": "Manual additions",
+    "website": ""
+  },
+  {
+    "name": "Escanaba River Site",
+    "category": "boondocking",
+    "categoryLabel": "Boondocking",
+    "lat": 46.14544310151374,
+    "lng": -87.42433039567379,
+    "description": "No amenities",
+    "id": "s949",
+    "sourceFolder": "Manual additions",
+    "website": ""
+  },
+  {
+    "name": "West Branch State Forest Campground",
+    "category": "state_federal_rustic",
+    "categoryLabel": "State/Federal Rustic",
+    "lat": 46.18731712595539,
+    "lng": -87.74713141313383,
+    "description": "Named state site; no amenities",
+    "id": "s950",
+    "sourceFolder": "Manual additions",
+    "website": ""
+  },
+  {
     "name": "Sawmill Creek Boondock",
     "category": "boondocking",
     "categoryLabel": "Boondocking",
-    "sourceFolder": "User-provided boondocking places",
     "lat": 46.129800551910414,
     "lng": -87.39783610286325,
-    "description": "User-provided boondocking site. No amenities.",
+    "description": "No amenities",
+    "id": "s951",
+    "sourceFolder": "Manual additions",
     "website": ""
   },
   {
-    "id": "s949",
     "name": "Escanaba River boondock",
     "category": "boondocking",
     "categoryLabel": "Boondocking",
-    "sourceFolder": "User-provided boondocking places",
-    "lat": 46.13046982197724,
-    "lng": -87.41046226029941,
-    "description": "User-provided boondocking site on the Escanaba River. No amenities.",
-    "website": ""
-  },
-  {
-    "id": "s950",
-    "name": "Escanaba River boondock",
-    "category": "boondocking",
-    "categoryLabel": "Boondocking",
-    "sourceFolder": "User-provided boondocking places",
     "lat": 46.07119749151616,
     "lng": -87.34493797323816,
-    "description": "User-provided boondocking site on the Escanaba River. No amenities.",
+    "description": "No amenities",
+    "id": "s952",
+    "sourceFolder": "Manual additions",
     "website": ""
   },
   {
-    "id": "s951",
     "name": "Fairport Marina Campground",
-    "category": "public",
-    "categoryLabel": "State / County / Town",
-    "sourceFolder": "State, county, and town Campgrounds",
+    "category": "private",
+    "categoryLabel": "Private Campground",
     "lat": 45.62536780231755,
     "lng": -86.66934906802747,
-    "description": "User-provided named campground site at Fairport Marina. No amenities noted.",
+    "description": "Named site",
+    "id": "s953",
+    "sourceFolder": "Manual additions",
     "website": ""
   },
   {
-    "id": "s952",
     "name": "Point Detour boondocking",
     "category": "boondocking",
     "categoryLabel": "Boondocking",
-    "sourceFolder": "User-provided boondocking places",
     "lat": 45.601745537461625,
     "lng": -86.6147502928866,
-    "description": "User-provided boondocking site at Point Detour. No amenities.",
+    "description": "No amenities",
+    "id": "s954",
+    "sourceFolder": "Manual additions",
     "website": ""
   }
 ]
