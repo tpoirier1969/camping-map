@@ -5714,9 +5714,9 @@
     "category": "public",
     "categoryLabel": "State / County / Town",
     "sourceFolder": "State, county, and town Campgrounds",
-    "lat": 46.1869444,
-    "lng": -87.6608332,
-    "description": "",
+    "lat": 46.18688685020441,
+    "lng": -87.66092363273724,
+    "description": "User-provided named state site. No amenities.",
     "website": ""
   },
   {
@@ -10425,6 +10425,61 @@
     "lat": 34.5759361,
     "lng": -86.9338889,
     "description": "",
+    "website": ""
+  },
+  {
+    "id": "s948",
+    "name": "Sawmill Creek Boondock",
+    "category": "boondocking",
+    "categoryLabel": "Boondocking",
+    "sourceFolder": "User-provided boondocking places",
+    "lat": 46.129800551910414,
+    "lng": -87.39783610286325,
+    "description": "User-provided boondocking site. No amenities.",
+    "website": ""
+  },
+  {
+    "id": "s949",
+    "name": "Escanaba River boondock",
+    "category": "boondocking",
+    "categoryLabel": "Boondocking",
+    "sourceFolder": "User-provided boondocking places",
+    "lat": 46.13046982197724,
+    "lng": -87.41046226029941,
+    "description": "User-provided boondocking site on the Escanaba River. No amenities.",
+    "website": ""
+  },
+  {
+    "id": "s950",
+    "name": "Escanaba River boondock",
+    "category": "boondocking",
+    "categoryLabel": "Boondocking",
+    "sourceFolder": "User-provided boondocking places",
+    "lat": 46.07119749151616,
+    "lng": -87.34493797323816,
+    "description": "User-provided boondocking site on the Escanaba River. No amenities.",
+    "website": ""
+  },
+  {
+    "id": "s951",
+    "name": "Fairport Marina Campground",
+    "category": "public",
+    "categoryLabel": "State / County / Town",
+    "sourceFolder": "State, county, and town Campgrounds",
+    "lat": 45.62536780231755,
+    "lng": -86.66934906802747,
+    "description": "User-provided named campground site at Fairport Marina. No amenities noted.",
+    "website": ""
+  },
+  {
+    "id": "s952",
+    "name": "Point Detour boondocking",
+    "category": "boondocking",
+    "categoryLabel": "Boondocking",
+    "sourceFolder": "User-provided boondocking places",
+    "lat": 45.601745537461625,
+    "lng": -86.6147502928866,
+    "description": "User-provided boondocking site at Point Detour. No amenities.",
     "website": ""
   }
 ]
