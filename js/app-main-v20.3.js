@@ -332,7 +332,12 @@ function initMap() {
 async function main() {
   bindUi();
   setLoadingState(true, 'Loading data…');
-  window.setTimeout(() => { if (model.sites.length || model.styleReady) setLoadingState(false); }, 6000);
+  window.setTimeout(() => {
+    if (!model.sites.length && !model.styleReady && els.statusText) {
+      els.statusText.textContent = 'Load guard kicked in. The map may still be usable, but one of the startup steps dragged too long.';
+    }
+    setLoadingState(false);
+  }, 10000);
   initMap();
   window.campingMapDebug = {
     model,
@@ -348,6 +353,18 @@ async function main() {
     setLoadingState(false);
   });
 }
+
+window.addEventListener('error', (event) => {
+  console.error('Unhandled startup error', event?.error || event?.message || event);
+  if (els.statusText) els.statusText.textContent = 'A script error interrupted startup. Check the browser console for the exact line.';
+  setLoadingState(false);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection', event?.reason || event);
+  if (els.statusText) els.statusText.textContent = 'A promise failed during startup. Check the browser console for details.';
+  setLoadingState(false);
+});
 
 main().catch((error) => {
   console.error(error);

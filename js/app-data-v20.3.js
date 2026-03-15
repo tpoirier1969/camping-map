@@ -625,8 +625,13 @@ async function fetchJsonWithTimeout(url, timeoutMs = 8000) {
     if (!response.ok) {
       return { ok: false, url, status: response.status, reason: `HTTP ${response.status}` };
     }
-    const json = await response.json();
-    return { ok: true, url, status: response.status, json };
+    const rawText = await response.text();
+    try {
+      const json = JSON.parse(rawText);
+      return { ok: true, url, status: response.status, json };
+    } catch (error) {
+      return { ok: false, url, status: response.status, reason: `Bad JSON: ${error?.message || 'parse failed'}` };
+    }
   } catch (error) {
     const reason = error?.name === 'AbortError' ? `Timed out after ${timeoutMs} ms` : (error?.message || 'Fetch failed');
     return { ok: false, url, status: 0, reason };
@@ -671,15 +676,12 @@ function normalizeSiteArray(sitesRaw) {
 }
 
 async function loadAllAvailableSiteArrays(urls, target = 'siteExtras') {
-  const loaded = [];
-  const attempts = [];
-  for (const url of urls) {
-    const result = await fetchJsonWithTimeout(url, 3500);
-    attempts.push({ url: result.url, ok: result.ok, status: result.status, reason: result.reason || '' });
-    if (result.ok) loaded.push({ url: result.url, json: result.json });
-  }
+  const results = await Promise.all(urls.map((url) => fetchJsonWithTimeout(url, 3000)));
+  const attempts = results.map((result) => ({ url: result.url, ok: result.ok, status: result.status, reason: result.reason || '' }));
+  const loaded = results.filter((result) => result.ok).map((result) => ({ url: result.url, json: result.json }));
   model.dataLoad[`${target}Attempted`] = attempts;
   model.dataLoad[`${target}Loaded`] = loaded.map((entry) => entry.url);
+  refreshStatusText();
   return loaded;
 }
 
@@ -693,37 +695,50 @@ async function loadData() {
   model.dataLoad.trailsError = '';
   refreshStatusText();
 
-  const [sitesRaw, extraSiteArrays] = await Promise.all([
-    loadFirstAvailable(SITE_DATA_URLS, 'sites').finally(() => {
-      model.dataLoad.loadingSites = false;
-      refreshStatusText();
-    }),
-    loadAllAvailableSiteArrays(EXTRA_SITE_DATA_URLS, 'siteExtras'),
-    loadTrailData().finally(() => {
-      model.dataLoad.loadingTrails = false;
-      refreshStatusText();
-    })
-  ]).then((results) => [results[0], results[1]]);
+  try {
+    const [sitesRaw, extraSiteArrays] = await Promise.all([
+      loadFirstAvailable(SITE_DATA_URLS, 'sites').finally(() => {
+        model.dataLoad.loadingSites = false;
+        refreshStatusText();
+      }),
+      loadAllAvailableSiteArrays(EXTRA_SITE_DATA_URLS, 'siteExtras'),
+      loadTrailData().finally(() => {
+        model.dataLoad.loadingTrails = false;
+        refreshStatusText();
+      })
+    ]).then((results) => [results[0], results[1]]);
 
-  const mergedSitesRaw = [
-    ...normalizeSiteArray(sitesRaw),
-    ...extraSiteArrays.flatMap((entry) => normalizeSiteArray(entry.json))
-  ];
+    const mergedSitesRaw = [
+      ...normalizeSiteArray(sitesRaw),
+      ...extraSiteArrays.flatMap((entry) => normalizeSiteArray(entry.json))
+    ];
 
-  model.sites = mergedSitesRaw.map(normalizeSite).filter(Boolean);
+    model.sites = mergedSitesRaw.map(normalizeSite).filter(Boolean);
 
-  buildLayerDefinitions();
-  buildStateGroups();
-  renderLayerControls();
-  renderLegend();
-  renderSummaryLegendKey();
-  syncTrailUi();
+    buildLayerDefinitions();
+    buildStateGroups();
+    renderLayerControls();
+    renderLegend();
+    renderSummaryLegendKey();
+    syncTrailUi();
 
-  if (model.map && model.styleReady) {
-    updateOverlays();
+    if (model.map && model.styleReady) {
+      updateOverlays();
+    }
+    refreshStatusText();
+    return model.sites;
+  } catch (error) {
+    console.error('loadData failed', error);
+    if (els.statusText) {
+      els.statusText.textContent = `Data load failed. ${error?.message || 'Unknown error'}`;
+    }
+    throw error;
+  } finally {
+    model.dataLoad.loadingSites = false;
+    model.dataLoad.loadingTrails = false;
+    refreshStatusText();
+    setLoadingState?.(false);
   }
-  refreshStatusText();
-  setLoadingState?.(false);
 }
 
 
