@@ -78,7 +78,7 @@ function addLayerIfMissing(layerDef, beforeId) {
 }
 
 function moveOverlayLayersToTop() {
-  const order = ['state-summary-circles', 'state-summary-labels', 'sites-circles', 'draft-circle', 'draft-label'];
+  const order = ['state-summary-circles', 'state-summary-labels', 'draft-circle', 'draft-label', 'sites-circles'];
   for (const id of order) {
     if (model.map.getLayer(id)) {
       try { model.map.moveLayer(id); } catch {}
@@ -120,25 +120,22 @@ function applyOverlaySourcesAndLayers() {
     }
   }, beforeId);
 
-  if (styleSupportsTextLayers()) {
-    addLayerIfMissing({
-      id: 'state-summary-labels', type: 'symbol', source: 'state-summaries',
-      layout: { 'text-field': ['get', 'summaryLabel'], 'text-size': 11.5, 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'], 'text-offset': [0, 0], 'text-justify': 'center', 'text-anchor': 'center', 'text-line-height': 1.15 },
-      paint: { 'text-color': '#ffffff', 'text-halo-color': 'rgba(0,0,0,0.85)', 'text-halo-width': 1.8 }
-    }, beforeId);
+  // Keep summary labels off for now. The raw C/B/I text labels clutter the map at low zoom and can interfere with taps.
+  if (model.map.getLayer('state-summary-labels')) {
+    try { model.map.removeLayer('state-summary-labels'); } catch {}
   }
 
   addLayerIfMissing({
     id: 'sites-circles', type: 'circle', source: 'sites',
     paint: {
-      'circle-radius': ['*', ['coalesce', ['get', 'radius'], 11], ['case', ['<=', ['zoom'], 5], 0.72, ['<=', ['zoom'], 8.5], 0.88, 1]],
+      'circle-radius': ['*', ['coalesce', ['get', 'radius'], 11], ['case', ['<=', ['zoom'], 5], 0.82, ['<=', ['zoom'], 7], 0.98, ['<=', ['zoom'], 8.5], 1.12, 1.28]],
       'circle-color': ['get', 'color'],
       'circle-opacity': 0.96,
       'circle-pitch-alignment': 'viewport',
       'circle-pitch-scale': 'viewport',
       'circle-emissive-strength': 1,
       'circle-stroke-color': '#101010',
-      'circle-stroke-width': 1.2
+      'circle-stroke-width': ['case', ['<=', ['zoom'], 5], 1.4, ['<=', ['zoom'], 8.5], 1.7, 2.0]
     }
   }, beforeId);
 
@@ -176,12 +173,13 @@ function setLayerVisibility(layerId, visible) {
 }
 
 function siteMarkerSizeForZoom(zoom) {
-  if (zoom <= 8.5) return 26;
-  return 30;
+  if (zoom <= 6.2) return 34;
+  if (zoom <= 8.5) return 38;
+  return 42;
 }
 
 function siteMarkerStrokeForZoom(zoom) {
-  return zoom <= 8.5 ? '0.9' : '1.0';
+  return zoom <= 6.2 ? '1.1' : (zoom <= 8.5 ? '1.2' : '1.35');
 }
 
 function clearDomMarkers() {
@@ -248,7 +246,7 @@ function updateOverlays() {
   const showSummaries = !showSiteDetails && els.toggleStateSummaries?.checked;
   setLayerVisibility('sites-circles', showSiteDetails);
   setLayerVisibility('state-summary-circles', showSummaries);
-  setLayerVisibility('state-summary-labels', showSummaries);
+  setLayerVisibility('state-summary-labels', false);
   setLayerVisibility('draft-circle', Boolean(model.draftFeature));
 
   if (showSiteDetails) renderDirectSiteMarkers(); else clearDomMarkers();
