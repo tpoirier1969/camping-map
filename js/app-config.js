@@ -1,4 +1,4 @@
-const VERSION = 'v20.5.0';
+const VERSION = 'v20.5.2';
 const DEFAULT_API_KEYS = {
   maptiler: '3jVO6TokbQhyTqtAmF8G',
   thunderforest: 'c0ceacbdeb224697bdedd71af8b20abd'
@@ -7,20 +7,45 @@ const SITE_DATA_URLS = ['data/sites.json'];
 const EXTRA_SITE_DATA_URLS = [];
 const TRAIL_GEOJSON_URLS = [];
 const TRAIL_VECTOR_MANIFEST_URLS = [];
+
 const BOONDOCKING_ZONE_SOURCES = [
   {
     key: 'ottawa_nf',
     label: 'Ottawa National Forest ownership',
-    zoneLabel: 'Ottawa National Forest public land',
-    url: "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_BasicOwnership_01/MapServer/0/query?where=OWNERCLASSIFICATION%20%3D%20%27USDA%20FOREST%20SERVICE%27%20AND%20FORESTNAME%20%3D%20%27Ottawa%20National%20Forest%27&outFields=OBJECTID%2CFORESTNAME%2COWNERCLASSIFICATION&returnGeometry=true&outSR=4326&f=geojson"
+    zoneLabel: 'Ottawa National Forest boondocking zone',
+    manager: 'USDA Forest Service',
+    kind: 'Public land ownership with lake cutouts',
+    rule: 'General dispersed camping area on Ottawa NF public land. Do not camp in developed campgrounds or on roads or trails.',
+    notes: 'Built from official Forest Service ownership polygons with lake polygons removed. Use site judgment near roads, trails, and developed areas.',
+    website: 'https://www.fs.usda.gov/r09/ottawa/recreation/camping-cabins',
+    ownershipQuery: {
+      serviceUrl: 'https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_BasicOwnership_01/MapServer/0',
+      where: "OWNERCLASSIFICATION = 'USDA FOREST SERVICE' AND FORESTNAME = 'Ottawa National Forest'",
+      outFields: 'OBJECTID,FORESTNAME,OWNERCLASSIFICATION'
+    },
+    subtractLakePolygons: true,
+    developedRecSetbackMiles: 0
   },
   {
     key: 'chequamegon_nicolet_nf',
     label: 'Chequamegon-Nicolet National Forest ownership',
-    zoneLabel: 'Chequamegon-Nicolet National Forest public land',
-    url: "https://dnrmaps.wi.gov/arcgis/rest/services/LF_DML/AGOL_LF_DNR_PUBLIC_LAND_WTM_Ext/MapServer/4/query?where=1%3D1&outFields=OBJECTID%2CNAME1%2CNAME_ORIG&returnGeometry=true&outSR=4326&f=geojson"
+    zoneLabel: 'Chequamegon-Nicolet boondocking zone',
+    manager: 'USDA Forest Service',
+    kind: 'Public land minus 0.25-mile developed-site setback',
+    rule: 'Dispersed camping not allowed within 0.25 mile of a developed recreation site on the Chequamegon-Nicolet National Forest.',
+    notes: 'Built from official USFS ownership polygons, then trimmed by a quarter-mile setback around developed recreation sites and by lake polygons.',
+    website: 'https://www.fs.usda.gov/sites/nfs/files/r09/chequamegon-nicolet/publication/alerts/09-13-25-02_ClosureOrder.pdf',
+    ownershipQuery: {
+      serviceUrl: 'https://dnrmaps.wi.gov/arcgis/rest/services/LF_DML/LF_DNR_MGD_Federal_WTM_Ext/MapServer/10',
+      where: '1=1',
+      outFields: 'OBJECTID,NAME_ORIG,NAME1'
+    },
+    subtractLakePolygons: true,
+    developedRecSetbackMiles: 0.25
   }
 ];
+const ARCGIS_RECREATION_SITE_SERVICE_URL = 'https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_InfraRecreationSites_01/MapServer/0';
+const ARCGIS_WATERBODY_SERVICE_URL = 'https://hydro.nationalmap.gov/arcgis/rest/services/3DHP_all/FeatureServer/60';
 const DEFAULT_CENTER = [-87.4, 46.6];
 const DEFAULT_ZOOM = 6;
 const DETAIL_ZOOM = 6.2;

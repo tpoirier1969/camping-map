@@ -2,7 +2,7 @@
   "type": "FeatureCollection",
   "features": [],
   "metadata": {
-    "note": "Zones are now fetched live from official ArcGIS ownership services at runtime. This local file is intentionally empty.",
-    "version": "v20.5.0"
+    "note": "Zones are generated live from official ownership, developed recreation site, and hydrography services at runtime. Local file remains empty by design.",
+    "version": "v20.5.1"
   }
 }

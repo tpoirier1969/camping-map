@@ -438,7 +438,7 @@ function bucketSymbol(bucket) {
     case 'state_local':
       return 'flag';
     case 'local':
-      return 'pin';
+      return 'picnic-table';
     case 'boondocking':
       return 'tree';
     case 'private':
@@ -475,11 +475,13 @@ function symbolSvg(symbol, color = 'currentColor') {
     case 'sign':
       return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M31 11v42" stroke="${dark}" stroke-width="4.4" stroke-linecap="round"/><path d="M18 18h23l5 4-5 4H18Z" fill="${fill}" stroke="${dark}" stroke-width="2.7" stroke-linejoin="round"/><path d="M14 31h19l5 4-5 4H14Z" fill="${light}" stroke="${dark}" stroke-width="2.5" stroke-linejoin="round"/><path d="M25 53h12" stroke="${dark}" stroke-width="3.5" stroke-linecap="round"/></svg>`;
     case 'shower':
-      return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M20 18h16c5 0 9 4 9 9v4" fill="none" stroke="${dark}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M41 31h8" stroke="${dark}" stroke-width="4" stroke-linecap="round"/><circle cx="47" cy="31" r="3.6" fill="${fill}" stroke="${dark}" stroke-width="2.4"/><path d="M44 38v10m6-9v8m-12-5v7" stroke="${light}" stroke-width="2.8" stroke-linecap="round"/><circle cx="20" cy="28" r="4.5" fill="${fill}" stroke="${dark}" stroke-width="2.4"/><path d="M20 33v12m0 0-6 9m6-9 6 9m-6-18-6 5m6-5 6 5" fill="none" stroke="${dark}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 12v40" stroke="${dark}" stroke-width="4" stroke-linecap="round"/><path d="M18 14h16c6 0 11 5 11 11v4" fill="none" stroke="${dark}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M45 29h6" stroke="${dark}" stroke-width="4" stroke-linecap="round"/><circle cx="53" cy="29" r="2.7" fill="${fill}" stroke="${dark}" stroke-width="2"/><path d="M47 36v11m5-9v9m-10-6v8" stroke="${light}" stroke-width="2.6" stroke-linecap="round"/><circle cx="28" cy="26" r="4.2" fill="${fill}" stroke="${dark}" stroke-width="2.3"/><path d="M28 31v10m0 0-5 7m5-7 5 7m-5-12-5 4m5-4 5 4" fill="none" stroke="${dark}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     case 'pin':
       return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 9c10 0 18 8 18 18 0 11-10 18-18 28-8-10-18-17-18-28 0-10 8-18 18-18Z" fill="${fill}" stroke="${dark}" stroke-width="2.8" stroke-linejoin="round"/><circle cx="32" cy="27" r="6.5" fill="${light}" stroke="${dark}" stroke-width="2.2"/></svg>`;
     case 'camper':
       return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 26h34c5 0 10 4 12 9l2 5v8H8Z" fill="${fill}" stroke="${dark}" stroke-width="2.6" stroke-linejoin="round"/><circle cx="22" cy="48" r="5" fill="${light}" stroke="${dark}" stroke-width="2.6"/><circle cx="45" cy="48" r="5" fill="${light}" stroke="${dark}" stroke-width="2.6"/><path d="M15 31h16v10H15Z" fill="${light}" stroke="${dark}" stroke-width="2.2"/><path d="M35 31h8" stroke="${dark}" stroke-width="2.2" stroke-linecap="round"/></svg>`;
+    case 'picnic-table':
+      return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 24h28" stroke="${dark}" stroke-width="4" stroke-linecap="round"/><path d="M16 28h32v6H16Z" fill="${fill}" stroke="${dark}" stroke-width="2.4" stroke-linejoin="round"/><path d="M12 36h18v5H12Z" fill="${light}" stroke="${dark}" stroke-width="2.2" stroke-linejoin="round"/><path d="M34 36h18v5H34Z" fill="${light}" stroke="${dark}" stroke-width="2.2" stroke-linejoin="round"/><path d="M24 34l-4 14m20-14 4 14m-14-7-5 12m14-12 5 12" fill="none" stroke="${dark}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     case 'info':
       return `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="22" fill="${fill}" stroke="${dark}" stroke-width="2.6"/><path d="M32 27v17" stroke="${light}" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="19.5" r="3.2" fill="${light}"/></svg>`;
     case 'trail':
@@ -724,6 +726,7 @@ function normalizeBoondockingZoneFeatures(raw) {
   return { type: 'FeatureCollection', features };
 }
 
+
 function tagBoondockingZoneFeatures(raw, source) {
   const fc = normalizeFeatureCollection(raw);
   return {
@@ -732,6 +735,12 @@ function tagBoondockingZoneFeatures(raw, source) {
       type: 'Feature',
       properties: {
         ...(feature.properties || {}),
+        name: feature.properties?.name || source.zoneLabel,
+        manager: feature.properties?.manager || source.manager || source.label,
+        kind: feature.properties?.kind || source.kind || 'Public land ownership area',
+        rule: feature.properties?.rule || source.rule || '',
+        notes: feature.properties?.notes || source.notes || '',
+        website: feature.properties?.website || source.website || '',
         zoneSourceKey: source.key,
         zoneSourceLabel: source.label,
         zoneLabel: source.zoneLabel,
@@ -740,6 +749,216 @@ function tagBoondockingZoneFeatures(raw, source) {
       geometry: feature.geometry
     }))
   };
+}
+
+function featureCollectionFrom(features = []) {
+  return { type: 'FeatureCollection', features: features.filter(Boolean) };
+}
+
+function arcgisEnvelopeFromBbox(bbox) {
+  return {
+    xmin: bbox[0],
+    ymin: bbox[1],
+    xmax: bbox[2],
+    ymax: bbox[3],
+    spatialReference: { wkid: 4326 }
+  };
+}
+
+function bboxOverlaps(a, b) {
+  return Array.isArray(a) && Array.isArray(b) && a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
+}
+
+function featureBbox(feature) {
+  try {
+    return window.turf?.bbox(feature) || null;
+  } catch {
+    return null;
+  }
+}
+
+function safeSimplify(feature, tolerance = 0.00003) {
+  try {
+    return window.turf?.simplify ? window.turf.simplify(feature, { tolerance, highQuality: true, mutate: false }) : feature;
+  } catch {
+    return feature;
+  }
+}
+
+function differencePolygons(baseFeature, eraseFeature) {
+  if (!baseFeature || !eraseFeature || !window.turf?.difference) return baseFeature;
+  try {
+    return window.turf.difference(baseFeature, eraseFeature);
+  } catch {
+    try {
+      return window.turf.difference(window.turf.featureCollection([baseFeature, eraseFeature]));
+    } catch {
+      return baseFeature;
+    }
+  }
+}
+
+function pointInOwnership(pointFeature, ownershipFc) {
+  if (!pointFeature?.geometry || pointFeature.geometry.type !== 'Point' || !window.turf?.booleanPointInPolygon) return true;
+  const pointBox = featureBbox(pointFeature);
+  return (ownershipFc.features || []).some((poly) => {
+    const polyBox = featureBbox(poly);
+    if (pointBox && polyBox && !bboxOverlaps(pointBox, polyBox)) return false;
+    try {
+      return window.turf.booleanPointInPolygon(pointFeature, poly, { ignoreBoundary: false });
+    } catch {
+      return false;
+    }
+  });
+}
+
+async function fetchArcGisGeoJsonPaged(serviceUrl, options = {}) {
+  const attempts = [];
+  const features = [];
+  const pageSize = Number(options.resultRecordCount) || 1000;
+  let offset = 0;
+  let keepGoing = true;
+  while (keepGoing) {
+    const params = new URLSearchParams();
+    params.set('where', options.where || '1=1');
+    params.set('outFields', options.outFields || '*');
+    params.set('returnGeometry', String(options.returnGeometry !== false));
+    params.set('outSR', String(options.outSR || 4326));
+    params.set('f', 'geojson');
+    params.set('resultOffset', String(offset));
+    params.set('resultRecordCount', String(pageSize));
+    if (options.orderByFields) params.set('orderByFields', options.orderByFields);
+    if (options.geometry) {
+      params.set('geometry', JSON.stringify(options.geometry));
+      params.set('geometryType', options.geometryType || 'esriGeometryEnvelope');
+      params.set('inSR', String(options.inSR || 4326));
+      params.set('spatialRel', options.spatialRel || 'esriSpatialRelIntersects');
+    }
+    const url = `${serviceUrl.replace(/\/$/, '')}/query?${params.toString()}`;
+    const result = await fetchJsonWithTimeout(url, options.timeoutMs || 15000);
+    attempts.push({ url, ok: result.ok, status: result.status, reason: result.reason || '' });
+    if (!result.ok) break;
+    const fc = normalizeFeatureCollection(result.json);
+    const page = fc.features || [];
+    features.push(...page);
+    if (!page.length || page.length < pageSize) keepGoing = false;
+    offset += page.length;
+    if (offset > 50000) keepGoing = false;
+  }
+  return { fc: featureCollectionFrom(features), attempts };
+}
+
+function buildExclusionMasksFromPoints(pointsFc, miles = 0) {
+  if (!miles || !window.turf?.buffer) return [];
+  const masks = [];
+  for (const feature of normalizeFeatureCollection(pointsFc).features) {
+    if (feature?.geometry?.type !== 'Point') continue;
+    try {
+      const buffered = window.turf.buffer(feature, miles, { units: 'miles' });
+      if (buffered?.geometry) masks.push(safeSimplify(buffered, 0.00005));
+    } catch {
+      // keep going
+    }
+  }
+  return masks;
+}
+
+function applyExclusionMasksToOwnership(ownershipFc, masks = []) {
+  const cleaned = [];
+  const maskEntries = masks
+    .filter((feature) => feature?.geometry)
+    .map((feature) => ({ feature, bbox: featureBbox(feature) }));
+  for (const base of normalizeBoondockingZoneFeatures(ownershipFc).features) {
+    let current = safeSimplify(base, 0.00002);
+    let currentBox = featureBbox(current);
+    for (const maskEntry of maskEntries) {
+      if (!current) break;
+      if (currentBox && maskEntry.bbox && !bboxOverlaps(currentBox, maskEntry.bbox)) continue;
+      const next = differencePolygons(current, maskEntry.feature);
+      current = next || null;
+      currentBox = current ? featureBbox(current) : null;
+    }
+    if (!current?.geometry) continue;
+    try {
+      const area = window.turf?.area ? window.turf.area(current) : 1;
+      if (area >= 6000) cleaned.push(current);
+    } catch {
+      cleaned.push(current);
+    }
+  }
+  return featureCollectionFrom(cleaned);
+}
+
+async function fetchOwnershipZonesForSource(source) {
+  const query = source.ownershipQuery || {};
+  const result = await fetchArcGisGeoJsonPaged(query.serviceUrl, {
+    where: query.where || '1=1',
+    outFields: query.outFields || '*',
+    outSR: 4326,
+    resultRecordCount: query.resultRecordCount || 1000,
+    timeoutMs: 15000
+  });
+  return result;
+}
+
+async function fetchLakeMasksForOwnership(ownershipFc) {
+  if (!window.turf?.bbox) return { fc: featureCollectionFrom([]), attempts: [] };
+  const bbox = window.turf.bbox(ownershipFc);
+  return fetchArcGisGeoJsonPaged(ARCGIS_WATERBODY_SERVICE_URL, {
+    where: 'featuretype IN (3,4) AND (areasqkm IS NULL OR areasqkm >= 0.02)',
+    outFields: 'OBJECTID,featuretype,featuretypelabel,areasqkm,gnisidlabel',
+    geometry: arcgisEnvelopeFromBbox(bbox),
+    geometryType: 'esriGeometryEnvelope',
+    inSR: 4326,
+    outSR: 4326,
+    resultRecordCount: 1200,
+    timeoutMs: 16000
+  });
+}
+
+async function fetchDevelopedRecreationSitesForOwnership(ownershipFc) {
+  if (!window.turf?.bbox) return { fc: featureCollectionFrom([]), attempts: [] };
+  const bbox = window.turf.bbox(ownershipFc);
+  const result = await fetchArcGisGeoJsonPaged(ARCGIS_RECREATION_SITE_SERVICE_URL, {
+    where: "SITE_SUBTYPE <> '' AND RECAREA_STATUS <> 'Archived'",
+    outFields: 'OBJECTID,SITE_NAME,SITE_SUBTYPE,DEVELOPMENT_STATUS,DEVELOPMENT_SCALE,RECAREA_NAME,RECAREA_STATUS',
+    geometry: arcgisEnvelopeFromBbox(bbox),
+    geometryType: 'esriGeometryEnvelope',
+    inSR: 4326,
+    outSR: 4326,
+    resultRecordCount: 1200,
+    timeoutMs: 16000
+  });
+  const filtered = normalizeFeatureCollection(result.fc).features.filter((feature) => pointInOwnership(feature, ownershipFc));
+  return { fc: featureCollectionFrom(filtered), attempts: result.attempts };
+}
+
+async function buildBoondockingZonesForSource(source) {
+  const ownershipResult = await fetchOwnershipZonesForSource(source);
+  let ownershipFc = normalizeBoondockingZoneFeatures(ownershipResult.fc);
+  const attempts = [...ownershipResult.attempts.map((entry) => ({ ...entry, label: `${source.label} ownership` }))];
+  if (!ownershipFc.features.length) {
+    return { fc: featureCollectionFrom([]), attempts };
+  }
+
+  const exclusionMasks = [];
+  if (source.subtractLakePolygons) {
+    const lakeResult = await fetchLakeMasksForOwnership(ownershipFc);
+    attempts.push(...lakeResult.attempts.map((entry) => ({ ...entry, label: `${source.label} lake cutouts` })));
+    exclusionMasks.push(...normalizeFeatureCollection(lakeResult.fc).features.map((feature) => safeSimplify(feature, 0.00003)));
+  }
+
+  if (source.developedRecSetbackMiles > 0) {
+    const recResult = await fetchDevelopedRecreationSitesForOwnership(ownershipFc);
+    attempts.push(...recResult.attempts.map((entry) => ({ ...entry, label: `${source.label} developed recreation sites` })));
+    exclusionMasks.push(...buildExclusionMasksFromPoints(recResult.fc, source.developedRecSetbackMiles));
+  }
+
+  if (exclusionMasks.length) {
+    ownershipFc = applyExclusionMasksToOwnership(ownershipFc, exclusionMasks);
+  }
+
+  return { fc: tagBoondockingZoneFeatures(ownershipFc, source), attempts };
 }
 
 function rebuildBoondockingZonesFromRaw() {
@@ -752,13 +971,13 @@ async function loadBoondockingZoneData() {
   const attempts = [];
   const loadedFeatures = [];
   for (const source of BOONDOCKING_ZONE_SOURCES) {
-    const result = await fetchJsonWithTimeout(source.url, 12000);
-    attempts.push({ url: source.url, ok: result.ok, status: result.status, reason: result.reason || '', label: source.label });
-    if (result.ok) {
-      const tagged = tagBoondockingZoneFeatures(result.json, source);
-      loadedFeatures.push(...tagged.features);
-    } else {
-      console.warn('Boondocking zone source failed', source.label, result.reason || result.status);
+    try {
+      const result = await buildBoondockingZonesForSource(source);
+      attempts.push(...result.attempts);
+      loadedFeatures.push(...normalizeFeatureCollection(result.fc).features);
+    } catch (error) {
+      console.warn('Boondocking zone source failed', source.label, error);
+      attempts.push({ url: source.ownershipQuery?.serviceUrl || '', ok: false, status: 0, reason: String(error), label: source.label });
     }
   }
   model.dataLoad.boondockingZonesAttempted = attempts;

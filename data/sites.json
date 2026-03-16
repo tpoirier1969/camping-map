@@ -11906,5 +11906,82 @@
     "description": "Boondocking search anchor for Ottawa National Forest road-access country around Watersmeet, Marion Lake, and Golden Lake.",
     "website": "https://www.fs.usda.gov/r09/ottawa/recreation/opportunities/highway-vehicles-ohv",
     "id": "s1044"
+  },
+  {
+    "name": "Burned Dam Campground",
+    "lat": 46.31379535,
+    "lng": -89.05313987,
+    "category": "federal rustic",
+    "categoryLabel": "Federal Campgrounds",
+    "description": "Free developed dispersed campground on the Middle Branch Ontonagon River near Mex-i-mine Falls; vault toilet, no potable water.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/burned-dam-campground",
+    "sourceFolder": "Federal Campgrounds",
+    "id": "s1045"
+  },
+  {
+    "name": "Imp Lake Campground",
+    "lat": 46.21766654,
+    "lng": -89.070557,
+    "category": "federal",
+    "categoryLabel": "Federal Campgrounds",
+    "description": "Ottawa NF campground with 22 sites, vault toilets, hand pumps, boat launch, and nearby Imp Lake Trail.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/imp-lake-campground",
+    "sourceFolder": "Federal Campgrounds",
+    "id": "s1046"
+  },
+  {
+    "name": "Norway Lake Campground",
+    "lat": 46.41583408,
+    "lng": -88.68205671,
+    "category": "federal",
+    "categoryLabel": "Federal Campgrounds",
+    "description": "Ottawa NF campground near Sidnaw with 27 drive-in sites, vault toilets, hand pumps, picnic shelter, and boat landing.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/norway-lake-campground",
+    "sourceFolder": "Federal Campgrounds",
+    "id": "s1047"
+  },
+  {
+    "name": "Sparrow Rapids Campground",
+    "lat": 46.50477544,
+    "lng": -88.94735023,
+    "category": "federal rustic",
+    "categoryLabel": "Federal Campgrounds",
+    "description": "Limited-service Ottawa NF campground with 6 sites near the East Branch Ontonagon River; no potable water.",
+    "website": "https://www.fs.usda.gov/r09/ottawa/recreation/sparrow-rapids-campground",
+    "sourceFolder": "Federal Campgrounds",
+    "id": "s1048"
+  },
+  {
+    "name": "River Road RV Park & Campground",
+    "lat": 46.865565,
+    "lng": -89.317878,
+    "category": "private",
+    "categoryLabel": "Private Campgrounds",
+    "description": "Private campground in Ontonagon with full-hookup pull-through RV sites, tent sites, showers, laundry, and Wi-Fi.",
+    "website": "https://riverroadrvpark.net",
+    "sourceFolder": "Private Campgrounds",
+    "id": "s1049"
+  },
+  {
+    "name": "Stargazers U.P. Campground",
+    "lat": 46.5453,
+    "lng": -90.08358,
+    "category": "private",
+    "categoryLabel": "Private Campgrounds",
+    "description": "New full-hookup private campground at North Ironwood Acres on Black River Road with bathhouse, showers, and playground.",
+    "website": "https://www.stargazerscampground.com/",
+    "sourceFolder": "Private Campgrounds",
+    "id": "s1050"
+  },
+  {
+    "name": "Curry Park Campground",
+    "lat": 46.46347091,
+    "lng": -90.18502928,
+    "category": "local",
+    "categoryLabel": "Local Campgrounds",
+    "description": "City-run Ironwood campground with electric and some full-hookup sites, modern restroom/shower building, water fill, and dump station.",
+    "website": "https://ironwoodmi.gov/curry-park-campground/",
+    "sourceFolder": "Local Campgrounds",
+    "id": "s1051"
   }
 ]
