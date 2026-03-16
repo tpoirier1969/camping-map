@@ -242,7 +242,7 @@ function bindUi() {
   });
   els.toggleStateSummaries?.addEventListener('change', updateOverlays);
   els.toggleSitePoints?.addEventListener('change', updateOverlays);
-  els.toggleBoondockingZones?.addEventListener('change', updateOverlays);
+  els.toggleBoondockingZones?.addEventListener('change', () => { updateOverlays(); if (els.toggleBoondockingZones.checked && typeof scheduleBoondockingZoneRefresh === 'function') scheduleBoondockingZoneRefresh(true); });
   els.toggleAddMode?.addEventListener('change', () => { model.addMode = els.toggleAddMode.checked; });
 
   els.basemapSelect.value = ['outdoor','satellite','topo','tf_outdoors','osm'].includes(model.mapStyleMode) ? model.mapStyleMode : 'outdoor';

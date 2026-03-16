@@ -415,6 +415,7 @@ function updateOverlays() {
   const zonesEnabled = els.toggleBoondockingZones ? els.toggleBoondockingZones.checked : true;
   setLayerVisibility('boondocking-zones-fill', zonesEnabled);
   setLayerVisibility('boondocking-zones-outline', zonesEnabled);
+  if (zonesEnabled && typeof scheduleBoondockingZoneRefresh === 'function') scheduleBoondockingZoneRefresh(false);
 
   if (showSiteDetails) renderDirectSiteMarkers(); else clearDomMarkers();
   if (showSummaries) renderSummaryMarkers(); else clearSummaryDomMarkers();
@@ -452,7 +453,7 @@ function initMap() {
   model.map.on('moveend', () => { updateZoomReadout(); updateOverlays(); });
   model.map.on('zoom', updateZoomReadout);
   model.map.on('zoomend', () => { updateZoomReadout(); updateOverlays(); });
-  model.map.on('idle', () => { updateZoomReadout(); if (shouldShowSiteDetails()) renderDirectSiteMarkers(); });
+  model.map.on('idle', () => { updateZoomReadout(); if (shouldShowSiteDetails()) renderDirectSiteMarkers(); if (els.toggleBoondockingZones?.checked && typeof scheduleBoondockingZoneRefresh === 'function') scheduleBoondockingZoneRefresh(false); });
   model.map.on('error', (event) => {
     console.error('Map error', event?.error || event);
     setLoadingState(false);

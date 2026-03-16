@@ -1,4 +1,4 @@
-const VERSION = 'v20.5.2';
+const VERSION = 'v20.5.4';
 const DEFAULT_API_KEYS = {
   maptiler: '3jVO6TokbQhyTqtAmF8G',
   thunderforest: 'c0ceacbdeb224697bdedd71af8b20abd'
@@ -24,7 +24,8 @@ const BOONDOCKING_ZONE_SOURCES = [
       outFields: 'OBJECTID,FORESTNAME,OWNERCLASSIFICATION'
     },
     subtractLakePolygons: true,
-    developedRecSetbackMiles: 0
+    developedRecSetbackMiles: 0,
+    viewBbox: [-90.2, 45.55, -87.7, 47.45]
   },
   {
     key: 'chequamegon_nicolet_nf',
@@ -37,11 +38,12 @@ const BOONDOCKING_ZONE_SOURCES = [
     website: 'https://www.fs.usda.gov/sites/nfs/files/r09/chequamegon-nicolet/publication/alerts/09-13-25-02_ClosureOrder.pdf',
     ownershipQuery: {
       serviceUrl: 'https://dnrmaps.wi.gov/arcgis/rest/services/LF_DML/LF_DNR_MGD_Federal_WTM_Ext/MapServer/10',
-      where: '1=1',
+      where: "(UPPER(NAME_ORIG) LIKE '%CHEQUAMEGON%' OR UPPER(NAME_ORIG) LIKE '%NICOLET%' OR UPPER(NAME1) LIKE '%CHEQUAMEGON%' OR UPPER(NAME1) LIKE '%NICOLET%')",
       outFields: 'OBJECTID,NAME_ORIG,NAME1'
     },
     subtractLakePolygons: true,
-    developedRecSetbackMiles: 0.25
+    developedRecSetbackMiles: 0.25,
+    viewBbox: [-91.9, 44.9, -87.7, 46.9]
   }
 ];
 const ARCGIS_RECREATION_SITE_SERVICE_URL = 'https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_InfraRecreationSites_01/MapServer/0';
@@ -58,6 +60,7 @@ const STATE_PADDING_FACTOR = 0.18;
 const LONG_PRESS_MS = 700;
 const STORAGE_KEYS = {
   apiKey: 'campingMap.maptilerApiKey',
+  boondockingZoneCache: 'campingMap.boondockingZoneCache',
   basemap: 'campingMap.basemap',
   terrain: 'campingMap.terrain',
   tilt: 'campingMap.pitch',
@@ -232,5 +235,10 @@ const model = {
   activePopup: null,
   manualDraftQueue: [],
   boondockingZones: null,
-  boondockingZonesRaw: null
+  boondockingZonesRaw: null,
+  boondockingZoneCacheLoaded: false,
+  boondockingZoneRefreshTimer: null,
+  boondockingZoneRefreshInFlight: false,
+  boondockingZoneViewportKey: '',
+  boondockingZoneError: ''
 };
