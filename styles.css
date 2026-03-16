@@ -341,3 +341,10 @@ body.modal-open { overflow: hidden; }
 }
 
 .boondocking-zone-note{font-size:0.84rem;color:var(--muted);}
+
+
+.symbol-preview-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center;line-height:0}
+.facility-badge{position:absolute;right:-3px;bottom:-3px;width:var(--facility-badge-size,12px);height:var(--facility-badge-size,12px);display:inline-flex;align-items:center;justify-content:center;background:#fff7ea;border:1.6px solid rgba(43,29,18,.78);border-radius:999px;box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden}
+.facility-badge svg{width:100%;height:100%;display:block}
+.facility-badge-modern{background:#eef7ff}
+.facility-badge-rustic{background:#fff4e7}

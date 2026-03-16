@@ -1,4 +1,4 @@
-const VERSION = 'v20.5.4';
+const VERSION = 'v20.5.5';
 const DEFAULT_API_KEYS = {
   maptiler: '3jVO6TokbQhyTqtAmF8G',
   thunderforest: 'c0ceacbdeb224697bdedd71af8b20abd'
@@ -125,16 +125,12 @@ const STATE_CENTERS = {
 };
 
 const BUILTIN_BUCKETS = {
-  modern: { label: 'Modern', color: '#8fcf63', radius: 15 },
-  rustic: { label: 'Rustic', color: '#8fcf63', radius: 15 },
   boondocking: { label: 'Boondocking / dispersed', color: '#3ea84a', radius: 15 },
   private: { label: 'Private campgrounds', color: '#55b9ff', radius: 15 },
   federal: { label: 'Federal campgrounds', color: '#8b4e24', radius: 15 },
   state: { label: 'State campgrounds', color: '#8fcf63', radius: 15 },
   local: { label: 'Local campgrounds', color: '#d96a16', radius: 15 },
   national_forest: { label: 'National forest campgrounds', color: '#8b4e24', radius: 15 },
-  state_federal_modern: { label: 'State / federal modern campgrounds', color: '#8fcf63', radius: 15 },
-  state_federal_rustic: { label: 'State / federal rustic campgrounds', color: '#8fcf63', radius: 15 },
   state_local: { label: 'State / local campgrounds', color: '#d96a16', radius: 15 },
   trailhead: { label: 'Trailheads', color: '#d1b24a', radius: 15 },
   info: { label: 'Info / reference', color: '#e0c43c', radius: 15 },

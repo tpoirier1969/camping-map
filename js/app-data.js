@@ -145,12 +145,6 @@ function trailPopupHtml(properties = {}) {
 
 function markerShapeForBucket(bucket) {
   switch (bucket) {
-    case 'modern':
-    case 'state_federal_modern':
-      return 'circle';
-    case 'rustic':
-    case 'state_federal_rustic':
-      return 'rounded-square';
     case 'boondocking':
       return 'diamond';
     case 'national_forest':
@@ -370,8 +364,6 @@ function normalizeCategory(rawCategory = '') {
   if ((value.includes('county') || value.includes('local') || value.includes('municipal') || value.includes('city') || value.includes('town')) && value.includes('camp')) return 'local';
   if (value.includes('national forest')) return 'national_forest';
   if (value.includes('public')) return 'state_local';
-  if (value.includes('rustic')) return 'rustic';
-  if (value.includes('modern')) return 'modern';
   if (value.includes('private')) return 'private';
   return makeSlug(value) || 'other';
 }
@@ -388,9 +380,21 @@ function categoryFromText(text, fallback = 'other') {
   if (value.includes('national forest')) return 'national_forest';
   if (value.includes('public')) return 'state_local';
   if (value.includes('private')) return 'private';
-  if (value.includes('rustic')) return 'rustic';
-  if (value.includes('modern')) return 'modern';
   return BUILTIN_BUCKETS[fallback] ? fallback : 'other';
+}
+
+
+function deriveCampgroundType(raw = {}) {
+  const direct = cleanLabel(getFieldAny(raw, ['campgroundType','campground_type','facilityClass','facility_class','development','development_level','camp_style','style','amenities']) || '').toLowerCase();
+  const text = [
+    direct,
+    cleanLabel(getFieldAny(raw, ['categoryLabel','sourceFolder','layerLabel','layer_name','layerName','layer','group','collection','type','kind','classification']) || '').toLowerCase(),
+    cleanLabel(getFieldAny(raw, ['description','notes','summary','reviewSummary']) || '').toLowerCase()
+  ].filter(Boolean).join(' | ');
+  if (!text) return '';
+  if (text.includes('rustic') || text.includes('primitive')) return 'rustic';
+  if (text.includes('modern')) return 'modern';
+  return '';
 }
 
 function deriveLayerInfo(raw, category) {
@@ -417,8 +421,6 @@ function deriveLayerInfo(raw, category) {
   if (bucket === 'boondocking') return { key: 'boondocking', label: 'Boondocking', bucket: 'boondocking' };
   if (bucket === 'info') return { key: 'info-reference', label: 'Info / Reference', bucket: 'info' };
   if (bucket === 'trailhead') return { key: 'trailheads', label: 'Trailheads', bucket: 'trailhead' };
-  if (bucket === 'rustic') return { key: 'rustic-campgrounds', label: 'Rustic Campgrounds', bucket: 'rustic' };
-  if (bucket === 'modern') return { key: 'modern-campgrounds', label: 'Modern Campgrounds', bucket: 'modern' };
   return { key: bucket ? `${makeSlug(bucket)}-sites` : 'other-sites', label: bucket ? `${titleCase(bucket)} Sites` : 'Other Campsites', bucket: bucket || 'other' };
 }
 
@@ -429,12 +431,6 @@ function bucketSymbol(bucket) {
       return 'federal-arrowhead';
     case 'state':
       return 'state-flag';
-    case 'modern':
-    case 'state_federal_modern':
-      return 'shower';
-    case 'rustic':
-    case 'state_federal_rustic':
-      return 'tent';
     case 'state_local':
       return 'flag';
     case 'local':
@@ -491,9 +487,22 @@ function symbolSvg(symbol, color = 'currentColor') {
   }
 }
 
-function markerPreviewHtml(bucket, color, size = 18) {
+
+function facilityBadgeHtml(campgroundType = '', size = 18) {
+  const type = String(campgroundType || '').toLowerCase();
+  if (!type) return '';
+  const symbol = type === 'rustic' ? 'tent' : type === 'modern' ? 'shower' : '';
+  if (!symbol) return '';
+  return `<span class="facility-badge facility-badge-${escapeAttribute(type)}" style="--facility-badge-size:${size}px">${symbolSvg(symbol, type === 'rustic' ? '#c9853d' : '#5d8fbf')}</span>`;
+}
+
+function markerPreviewHtml(bucket, color, size = 18, campgroundType = '') {
   const symbol = bucketSymbol(bucket);
-  return `<span class="symbol-preview" style="--preview-size:${size}px;--preview-color:${escapeAttribute(color || '#666')}">${symbolSvg(symbol, escapeAttribute(color || '#666'))}</span>`;
+  const badge = facilityBadgeHtml(campgroundType, Math.max(12, Math.round(size * 0.54)));
+  return `<span class="symbol-preview-wrap">` +
+    `<span class="symbol-preview" style="--preview-size:${size}px;--preview-color:${escapeAttribute(color || '#666')}">${symbolSvg(symbol, escapeAttribute(color || '#666'))}</span>` +
+    badge +
+    `</span>`;
 }
 
 
@@ -605,9 +614,15 @@ function normalizeSite(raw, idx) {
   if (!lngLat) return null;
   const state = deriveState(source, lngLat);
   const rawCategory = getFieldAny(source, ['category','type','kind','layer','classification','bucket','campType','camp_type','style','accessType','ownershipType']) || '';
-  const category = normalizeCategory(rawCategory || `${getFieldAny(source, ['layerLabel','layer_name','layerName','layer','group','collection']) || ''} ${getFieldAny(source, ['owner','ownership','manager','agency','system','landManager']) || ''}`);
+  const categoryHint = [
+    rawCategory,
+    getFieldAny(source, ['categoryLabel','sourceFolder','layerLabel','layer_name','layerName','layer','group','collection']) || '',
+    getFieldAny(source, ['owner','ownership','manager','agency','system','landManager']) || ''
+  ].filter(Boolean).join(' ');
+  const category = normalizeCategory(categoryHint);
   const layerInfo = deriveLayerInfo(source, category);
   const website = getFieldAny(source, ['website','url','link','official_url','officialUrl']) || '';
+  const campgroundType = deriveCampgroundType(source);
   const name = getFieldAny(source, ['name','title','site','label','campground','campgroundName']) || `Untitled site ${idx + 1}`;
   const description = getFieldAny(source, ['description','notes','summary','reviewSummary']) || '';
   const access = getFieldAny(source, ['access','road_access','roadAccess']) || '';
@@ -624,6 +639,7 @@ function normalizeSite(raw, idx) {
     bucket: layerInfo.bucket,
     description,
     website,
+    campgroundType,
     navigateUrl: `https://www.google.com/maps?q=${lngLat[1]},${lngLat[0]}`,
     access,
     cost,
@@ -642,6 +658,7 @@ function normalizeSite(raw, idx) {
         bucket: layerInfo.bucket,
         description,
         website,
+        campgroundType,
         navigateUrl: `https://www.google.com/maps?q=${lngLat[1]},${lngLat[0]}`,
         access,
         cost,
@@ -851,7 +868,7 @@ async function fetchArcGisGeoJsonPaged(serviceUrl, options = {}) {
 function siteIsDevelopedCampground(site) {
   const bucket = String(site?.bucket || '').toLowerCase();
   if (!bucket || ['boondocking', 'info', 'trailhead', 'draft', 'other'].includes(bucket)) return false;
-  return ['modern', 'rustic', 'federal', 'state', 'local', 'private', 'national_forest', 'state_federal_modern', 'state_federal_rustic', 'state_local'].includes(bucket);
+  return ['federal', 'state', 'local', 'private', 'national_forest', 'state_local'].includes(bucket);
 }
 
 function buildExclusionMasksFromKnownSites(ownershipFc, source) {

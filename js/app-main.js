@@ -1,10 +1,11 @@
 function popupHtmlForSite(props) {
   const parts = [];
+  if (props.campgroundType) parts.push(`<div><strong>Type:</strong> ${escapeHtml(titleCase(props.campgroundType))}</div>`);
   if (props.access) parts.push(`<div><strong>Access:</strong> ${escapeHtml(props.access)}</div>`);
   if (props.cost) parts.push(`<div><strong>Cost:</strong> ${escapeHtml(props.cost)}</div>`);
   if (props.showers) parts.push(`<div><strong>Showers:</strong> ${escapeHtml(props.showers)}</div>`);
   if (props.description) parts.push(`<div>${escapeHtml(props.description)}</div>`);
-  return `<div class="popup-content"><div class="popup-title">${escapeHtml(props.name)}</div><div class="popup-meta">${escapeHtml(props.state)} · ${escapeHtml(props.layerLabel)}</div>${parts.join('')}<div class="popup-actions"><a href="${escapeAttribute(props.navigateUrl)}" target="_blank" rel="noopener noreferrer">Navigate</a>${props.website ? `<a href="${escapeAttribute(props.website)}" target="_blank" rel="noopener noreferrer">Website</a>` : ''}</div></div>`;
+  return `<div class="popup-content"><div class="popup-title">${escapeHtml(props.name)}</div><div class="popup-meta">${escapeHtml(props.state)} · ${escapeHtml(props.layerLabel)}${props.campgroundType ? ` · ${escapeHtml(titleCase(props.campgroundType))}` : ''}</div>${parts.join('')}<div class="popup-actions"><a href="${escapeAttribute(props.navigateUrl)}" target="_blank" rel="noopener noreferrer">Navigate</a>${props.website ? `<a href="${escapeAttribute(props.website)}" target="_blank" rel="noopener noreferrer">Website</a>` : ''}</div></div>`;
 }
 
 function popupHtmlForState(props) {
@@ -371,7 +372,7 @@ function renderDirectSiteMarkers() {
     el.setAttribute('aria-label', site.name || 'Campsite');
     el.style.width = `${markerSize}px`;
     el.style.height = `${markerSize}px`;
-    el.innerHTML = `<span class="site-marker-hit" style="width:${markerSize}px;height:${markerSize}px">${markerPreviewHtml(site.bucket, def.color || hashColor(site.layerKey), visualSize).replace(/stroke-width=\"([0-9.]+)\"/g, (_, value) => `stroke-width=\"${Number(value) * Number(strokeScale)}\"`)}</span>`;
+    el.innerHTML = `<span class="site-marker-hit" style="width:${markerSize}px;height:${markerSize}px">${markerPreviewHtml(site.bucket, def.color || hashColor(site.layerKey), visualSize, site.campgroundType).replace(/stroke-width=\"([0-9.]+)\"/g, (_, value) => `stroke-width=\"${Number(value) * Number(strokeScale)}\"`)}</span>`;
     el.addEventListener('click', (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
