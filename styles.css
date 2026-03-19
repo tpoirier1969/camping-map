@@ -1,22 +1,275 @@
-Western U.P. Camping Map — v20.4-rebuild
-Generated: 2026-03-19
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0b1116;
+}
 
-What changed in this batch
-- Added Mobile Atlas (USGS topo) as a selectable base map.
-- Added a real terrain exaggeration slider from 1.0x to 2.0x using open DEM tiles.
-- Added overlap handling: markers at the same coordinates spider out on click.
-- Added a fresh western U.P. campsite batch pulled from official USFS / Michigan DNR pages where possible.
-- Added point-based official opportunity markers for Trap Hills, Sturgeon River Gorge Wilderness, and Sylvania backcountry camping.
+:root {
+  --ink: #17222d;
+  --modern: #2f7d4d;
+  --rustic: #8b632e;
+  --boondocking: #3c5f3d;
+  --opportunity: #355f96;
+  --mixed: #364250;
+  --badge: #12171c;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+  --ring: rgba(16, 24, 32, 0.88);
+  --tent-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 20 12 4l8.5 16'/%3E%3Cpath d='M7.5 20 12 12l4.5 8'/%3E%3Cpath d='M12 4v16'/%3E%3C/svg%3E");
+  --tree-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3 7 10h3l-4 5h4l-3 4h10l-3-4h4l-4-5h3L12 3Z' fill='%23ffffff' stroke='%23ffffff'/%3E%3Cpath d='M12 17v4'/%3E%3C/svg%3E");
+  --flag-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 21V4'/%3E%3Cpath d='M6 5h10l-2 3 2 3H6' fill='%23ffffff' stroke='%23ffffff'/%3E%3C/svg%3E");
+  --stack-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 10 8-4 8 4-8 4-8-4Z'/%3E%3Cpath d='m4 14 8 4 8-4'/%3E%3C/svg%3E");
+}
 
-Important caveat
-- I did NOT draw the broad opportunity polygons yet. I could verify the opportunity AREAS, but I could not verify ownership-safe outline geometry tightly enough to promise “no private land inside.” So I left polygons out rather than sneaking in bogus boundaries.
-- A few campsite coordinates come from reputable third-party map/camping listings where the official page surfaced the campground but not a machine-friendly coordinate line in the available result set.
+#map {
+  position: absolute;
+  inset: 0;
+}
 
-Files
-- index.html
-- styles.css
-- app.js
-- data/data.js
+.panel {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 20;
+  width: min(350px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+  background: rgba(255, 255, 255, 0.94);
+  color: #14202b;
+  border-radius: 14px;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.24);
+  padding: 14px 14px 12px;
+  backdrop-filter: blur(6px);
+}
 
-Run
-- Open index.html in a browser, or serve the folder locally with any static web server.
+.panel h1 {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+  line-height: 1.2;
+}
+
+.subtle,
+.legend-note,
+.footer-note {
+  color: #415160;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.rule {
+  height: 1px;
+  background: #d8dde3;
+  margin: 10px 0;
+}
+
+.control-row {
+  margin: 8px 0 10px;
+}
+
+.control-row label.main {
+  display: block;
+  font-weight: 700;
+  font-size: 0.92rem;
+  margin-bottom: 6px;
+}
+
+select,
+input[type='range'] {
+  width: 100%;
+}
+
+.select-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+select {
+  appearance: none;
+  border: 1px solid #bcc7d2;
+  border-radius: 9px;
+  background: #fff;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+}
+
+.terrain-value {
+  font-weight: 700;
+  font-size: 0.92rem;
+  min-width: 52px;
+  text-align: right;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 7px 0;
+  font-size: 0.95rem;
+}
+
+.legend {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.92rem;
+}
+
+.swatch {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--ring);
+  box-shadow: var(--shadow);
+  flex: 0 0 auto;
+}
+
+.swatch::before,
+.site-marker::before,
+.spider-marker::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.swatch.modern,
+.site-marker.modern,
+.spider-marker.modern {
+  border-radius: 6px;
+  background: var(--modern);
+}
+.swatch.modern::before,
+.site-marker.modern::before,
+.spider-marker.modern::before {
+  background-image: var(--tent-icon);
+}
+
+.swatch.rustic,
+.site-marker.rustic,
+.spider-marker.rustic {
+  border-radius: 999px;
+  background: var(--rustic);
+}
+.swatch.rustic::before,
+.site-marker.rustic::before,
+.spider-marker.rustic::before {
+  background-image: var(--tent-icon);
+}
+
+.swatch.boondocking,
+.site-marker.boondocking,
+.spider-marker.boondocking {
+  border-radius: 999px;
+  background: var(--boondocking);
+}
+.swatch.boondocking::before,
+.site-marker.boondocking::before,
+.spider-marker.boondocking::before {
+  background-image: var(--tree-icon);
+}
+
+.swatch.opportunity,
+.site-marker.opportunity,
+.spider-marker.opportunity {
+  border-radius: 999px;
+  background: var(--opportunity);
+}
+.swatch.opportunity::before,
+.site-marker.opportunity::before,
+.spider-marker.opportunity::before {
+  background-image: var(--flag-icon);
+}
+
+.swatch.mixed,
+.site-marker.mixed,
+.spider-marker.mixed {
+  border-radius: 999px;
+  background: var(--mixed);
+}
+.swatch.mixed::before,
+.site-marker.mixed::before,
+.spider-marker.mixed::before {
+  background-image: var(--stack-icon);
+}
+
+.site-marker,
+.spider-marker {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1.5px solid var(--ring);
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.marker-count {
+  position: absolute;
+  right: -6px;
+  top: -6px;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  border: 1px solid #fff;
+  background: var(--badge);
+  color: #fff;
+  font-size: 10px;
+  line-height: 13px;
+  text-align: center;
+  padding: 0 3px;
+  transform: none !important;
+}
+
+.popup-card h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.popup-meta {
+  color: #516170;
+  margin-bottom: 8px;
+  font-size: 0.88rem;
+}
+
+.popup-row {
+  font-size: 0.92rem;
+  line-height: 1.35;
+  margin: 5px 0;
+}
+
+.popup-row a {
+  color: #184e96;
+}
+
+.maplibregl-popup-content {
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+@media (max-width: 720px) {
+  .panel {
+    width: min(92vw, 360px);
+    padding: 12px;
+  }
+
+  .panel h1 {
+    font-size: 1rem;
+  }
+}
