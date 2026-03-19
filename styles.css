@@ -1,22 +1,106 @@
-Western U.P. Camping Map — v20.4.1-clean-icons
-Generated: 2026-03-19
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#133b2c">
+  <title>Camping Map</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="https://cdn.maptiler.com/maptiler-sdk-js/latest/maptiler-sdk.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="appShell">
+    <div id="map"></div>
+    <div id="loadingOverlay" class="loading-overlay" hidden>
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <div id="loadingText">Loading data…</div>
+    </div>
+    <div id="zoomReadout" aria-live="polite">Zoom: --</div>
 
-What changed in this batch
-- Kept the prior rebuild features.
-- Tightened marker halos so they hug the symbol instead of floating too wide.
-- Replaced the campground marker look with a cleaner tent icon.
-- Swapped boondocking/opportunity markers to compact tree and flag icons for faster visual parsing.
-- Kept overlap handling: markers at the same coordinates spider out on click.
+    <button id="menuToggle" aria-label="Menu" title="Map options">☰</button>
 
-Important caveat
-- I did NOT draw the broad opportunity polygons yet. I could verify the opportunity AREAS, but I could not verify ownership-safe outline geometry tightly enough to promise “no private land inside.” So I left polygons out rather than sneaking in bogus boundaries.
-- A few campsite coordinates come from reputable third-party map/camping listings where the official page surfaced the campground but not a machine-friendly coordinate line in the available result set.
+    <aside id="menuPanel" class="is-open">
+      <div class="panel-header">
+        <div>
+          <h1>Camping Map <span id="versionTag">v20.5.10</span></h1>
+          <p id="statusText">Loading map data…</p>
+          <p id="dataStats" class="note"></p>
+        </div>
+        <button id="closeMenu" class="ghost-button" aria-label="Close menu">✕</button>
+      </div>
 
-Files
-- index.html
-- styles.css
-- app.js
-- data/data.js
+      <section class="panel-section">
+        <h2>Find an area</h2>
+        <label class="field-label" for="searchInput">Search place or coordinates</label>
+        <div class="search-row">
+          <input id="searchInput" name="search" type="text" placeholder="City, park, address, or lat, lng">
+          <button id="searchBtn" class="ghost-button" type="button">Go</button>
+        </div>
+<p id="searchStatus" class="note" aria-live="polite"></p>
+        <div id="searchResults" class="search-results" hidden></div>
+      </section>
 
-Run
-- Open index.html in a browser, or serve the folder locally with any static web server.
+      <section class="panel-section">
+        <h2>Basemap</h2>
+        <label class="field-label" for="basemapSelect">Map style</label>
+        <select id="basemapSelect" name="basemap">
+          <option value="outdoor">Outdoor</option>
+          <option value="satellite">Satellite Hybrid</option>
+          <option value="topo">Topo</option>
+          <option value="tf_outdoors">Thunderforest Outdoors - Disabled</option>
+          <option value="osm">OpenStreetMap fallback</option>
+        </select>
+        <label class="switch-row"><input type="checkbox" id="toggleTerrain"> 3D terrain</label>
+        <div class="terrain-control-box">
+          <label class="field-label" for="terrainExaggerationSlider">3D exaggeration <span id="terrainExaggerationValue">1.50×</span></label>
+          <input id="terrainExaggerationSlider" name="terrainExaggeration" type="range" min="1" max="3" step="0.05" value="1.5">
+        </div>
+        <label class="switch-row"><input type="checkbox" id="togglePitch"> Tilt camera when 3D is on</label>
+      </section>
+
+      <section class="panel-section">
+        <h2>Campsite layers</h2>
+        <div id="layerToggleList" class="toggle-list"></div>
+      </section>
+
+      <section class="panel-section">
+        <h2>Add a site</h2>
+        <label class="switch-row"><input type="checkbox" id="toggleAddMode"> Tap map to drop a draft pin</label>
+        <p class="note">Enable this and tap once, or long-press the map.</p>
+      </section>
+
+
+      <section class="panel-section">
+        <h2>Manual site queue</h2>
+        <p class="note">Use Add a site, tap the map, fill in the details, and append records here for later coding.</p>
+        <textarea id="draftQueueText" name="draftQueueText" class="draft-queue-text" rows="8" readonly placeholder="Draft site records will collect here..."></textarea>
+        <div class="search-row">
+          <button id="copyDraftQueueBtn" class="ghost-button" type="button">Copy queue</button>
+          <button id="downloadDraftQueueBtn" class="ghost-button" type="button">Download .txt</button>
+          <button id="clearDraftQueueBtn" class="ghost-button" type="button">Clear queue</button>
+        </div>
+        <p id="draftQueueStatus" class="note" aria-live="polite"></p>
+      </section>
+
+      <section class="panel-section" id="countsPanel">
+        <h2>Visible counts</h2>
+        <div id="countsGrid" class="counts-grid"></div>
+      </section>
+
+    </aside>
+  </div>
+
+  <script src="https://cdn.maptiler.com/maptiler-sdk-js/latest/maptiler-sdk.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+  <script src="js/app-config.js"></script>
+  <script src="js/app-data.js"></script>
+  <script src="js/app-summaries.js"></script>
+  <script src="js/app-basemap.js"></script>
+  <script src="js/app-ui.js"></script>
+  <script src="js/app-main.js"></script>
+</body>
+</html>
