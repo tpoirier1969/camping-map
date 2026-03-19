@@ -8,9 +8,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#133b2c">
   <title>Camping Map</title>
-  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="manifest" href="manifest.webmanifest?v=20.5.9.2">
   <link rel="stylesheet" href="https://cdn.maptiler.com/maptiler-sdk-js/latest/maptiler-sdk.css">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20.5.9.2">
 </head>
 <body>
   <div id="appShell">
@@ -26,7 +26,7 @@
     <aside id="menuPanel" class="is-open">
       <div class="panel-header">
         <div>
-          <h1>Camping Map <span id="versionTag">v20.5.10</span></h1>
+          <h1>Camping Map <span id="versionTag">v20.5.9.2</span></h1>
           <p id="statusText">Loading map data…</p>
           <p id="dataStats" class="note"></p>
         </div>
@@ -96,11 +96,11 @@
 
   <script src="https://cdn.maptiler.com/maptiler-sdk-js/latest/maptiler-sdk.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-  <script src="js/app-config.js"></script>
-  <script src="js/app-data.js"></script>
-  <script src="js/app-summaries.js"></script>
-  <script src="js/app-basemap.js"></script>
-  <script src="js/app-ui.js"></script>
-  <script src="js/app-main.js"></script>
+  <script src="js/app-config.js?v=20.5.9.2"></script>
+  <script src="js/app-data.js?v=20.5.9.2"></script>
+  <script src="js/app-summaries.js?v=20.5.9.2"></script>
+  <script src="js/app-basemap.js?v=20.5.9.2"></script>
+  <script src="js/app-ui.js?v=20.5.9.2"></script>
+  <script src="js/app-main.js?v=20.5.9.2"></script>
 </body>
 </html>

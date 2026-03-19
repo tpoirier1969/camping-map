@@ -428,8 +428,11 @@ function bucketSymbol(bucket) {
   switch (bucket) {
     case 'federal':
     case 'national_forest':
+      return 'tent';
     case 'state':
+      return 'tent';
     case 'state_local':
+      return 'flag';
     case 'local':
       return 'tent';
     case 'boondocking':
