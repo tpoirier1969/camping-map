@@ -1,7 +1,7 @@
-const VERSION = 'v20.5.5';
+const VERSION = 'v20.5.9.5';
 const DEFAULT_API_KEYS = {
-  maptiler: '3jVO6TokbQhyTqtAmF8G',
-  thunderforest: 'c0ceacbdeb224697bdedd71af8b20abd'
+  maptiler: '',
+  thunderforest: ''
 };
 const SITE_DATA_URLS = ['data/sites.json'];
 const EXTRA_SITE_DATA_URLS = [];
@@ -26,6 +26,25 @@ const BOONDOCKING_ZONE_SOURCES = [
     subtractLakePolygons: true,
     developedRecSetbackMiles: 0,
     viewBbox: [-90.2, 45.55, -87.7, 47.45]
+  },
+
+  {
+    key: 'hiawatha_nf',
+    label: 'Hiawatha National Forest ownership',
+    zoneLabel: 'Hiawatha National Forest boondocking zone',
+    manager: 'USDA Forest Service',
+    kind: 'Public land ownership with lake cutouts',
+    rule: 'Use only on Hiawatha National Forest public land and follow posted closures or area-specific restrictions. Wilderness and shoreline restrictions may apply in some areas.',
+    notes: 'Built from official Forest Service ownership polygons with lake polygons removed. This improves the broad opportunity layer for the central and eastern U.P. without pulling in private inholdings.',
+    website: 'https://www.fs.usda.gov/r09/hiawatha/recreation/camping-cabins',
+    ownershipQuery: {
+      serviceUrl: 'https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_BasicOwnership_01/MapServer/0',
+      where: "OWNERCLASSIFICATION = 'USDA FOREST SERVICE' AND FORESTNAME = 'Hiawatha National Forest'",
+      outFields: 'OBJECTID,FORESTNAME,OWNERCLASSIFICATION'
+    },
+    subtractLakePolygons: true,
+    developedRecSetbackMiles: 0,
+    viewBbox: [-87.7, 45.4, -84.2, 47.2]
   },
   {
     key: 'chequamegon_nicolet_nf',
@@ -202,7 +221,7 @@ const model = {
   addMode: false,
   hasApiKey: false,
   styleReady: false,
-  mapStyleMode: localStorage.getItem(STORAGE_KEYS.basemap) || 'outdoor',
+  mapStyleMode: localStorage.getItem(STORAGE_KEYS.basemap) || 'osm',
   terrainEnabled: localStorage.getItem(STORAGE_KEYS.terrain) === 'true',
   terrainExaggeration: (() => { const raw = Number(localStorage.getItem(STORAGE_KEYS.terrainExaggeration)); return Number.isFinite(raw) && raw >= 1 && raw <= 3 ? raw : 1.5; })(),
   tiltEnabled: localStorage.getItem(STORAGE_KEYS.tilt) === 'true',

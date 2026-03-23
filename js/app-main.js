@@ -353,6 +353,63 @@ function openSitePopup(lngLat, html) {
   model.activePopup = popup;
 }
 
+
+function clusterSitesByScreenPosition(sites = [], thresholdPx = 28) {
+  if (!model.map || !sites.length) return sites.map((site) => ({ site, displayLngLat: site.lngLat }));
+  const projected = sites.map((site) => ({
+    site,
+    point: model.map.project(site.lngLat),
+    sortKey: `${String(site.layerLabel || '')}|${String(site.name || '')}`.toLowerCase()
+  })).sort((a, b) => (a.point.y - b.point.y) || (a.point.x - b.point.x) || a.sortKey.localeCompare(b.sortKey));
+  const groups = [];
+  const thresholdSq = thresholdPx * thresholdPx;
+  for (const item of projected) {
+    let matched = null;
+    for (const group of groups) {
+      const dx = item.point.x - group.center.x;
+      const dy = item.point.y - group.center.y;
+      if ((dx * dx) + (dy * dy) <= thresholdSq) {
+        matched = group;
+        break;
+      }
+    }
+    if (!matched) {
+      matched = { items: [], center: { x: item.point.x, y: item.point.y } };
+      groups.push(matched);
+    }
+    matched.items.push(item);
+    const count = matched.items.length;
+    matched.center = {
+      x: matched.items.reduce((sum, entry) => sum + entry.point.x, 0) / count,
+      y: matched.items.reduce((sum, entry) => sum + entry.point.y, 0) / count
+    };
+  }
+
+  const placements = [];
+  for (const group of groups) {
+    const ordered = [...group.items].sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+    if (ordered.length === 1) {
+      placements.push({ site: ordered[0].site, displayLngLat: ordered[0].site.lngLat });
+      continue;
+    }
+    const baseRadius = Math.max(30, thresholdPx * 1.28);
+    for (let idx = 0; idx < ordered.length; idx += 1) {
+      const ring = Math.floor(idx / 8);
+      const posInRing = idx % 8;
+      const countInRing = Math.min(8, ordered.length - (ring * 8));
+      const angle = (-Math.PI / 2) + ((Math.PI * 2) * (posInRing / countInRing));
+      const radius = baseRadius + (ring * (thresholdPx * 1.05));
+      const displaced = {
+        x: group.center.x + Math.cos(angle) * radius,
+        y: group.center.y + Math.sin(angle) * radius
+      };
+      const lngLat = model.map.unproject(displaced);
+      placements.push({ site: ordered[idx].site, displayLngLat: [lngLat.lng, lngLat.lat], groupSize: ordered.length, clusterIndex: idx + 1 });
+    }
+  }
+  return placements;
+}
+
 function renderDirectSiteMarkers() {
   clearDomMarkers();
   const sitePointsEnabled = els.toggleSitePoints ? els.toggleSitePoints.checked : true;
@@ -360,25 +417,27 @@ function renderDirectSiteMarkers() {
   const zoom = model.map.getZoom();
   const bounds = model.map.getBounds();
   const markerSize = siteMarkerSizeForZoom(zoom);
-  const hitSize = markerSize + 10;
-  const visualSize = Math.max(26, markerSize - 10);
+  const visualSize = Math.max(24, markerSize - 12);
   const strokeScale = siteMarkerStrokeForZoom(zoom);
   const visibleSites = enabledSites().filter((site) => bounds.contains(site.lngLat)).slice(0, 1200);
-  for (const site of visibleSites) {
+  const placedSites = clusterSitesByScreenPosition(visibleSites, Math.max(42, markerSize * 1.35));
+  for (const placed of placedSites) {
+    const site = placed.site;
     const def = model.layerDefs.get(site.layerKey) || BUILTIN_BUCKETS.other;
     const el = document.createElement('button');
     el.type = 'button';
     el.className = 'site-dom-marker symbol-marker';
     el.setAttribute('aria-label', site.name || 'Campsite');
+    if (placed.groupSize > 1) el.setAttribute('title', `${site.name} (${placed.clusterIndex}/${placed.groupSize})`);
     el.style.width = `${markerSize}px`;
     el.style.height = `${markerSize}px`;
-    el.innerHTML = `<span class="site-marker-hit" style="width:${markerSize}px;height:${markerSize}px">${markerPreviewHtml(site.bucket, def.color || hashColor(site.layerKey), visualSize, site.campgroundType).replace(/stroke-width=\"([0-9.]+)\"/g, (_, value) => `stroke-width=\"${Number(value) * Number(strokeScale)}\"`)}</span>`;
+    el.innerHTML = `<span class="site-marker-hit" style="width:${markerSize}px;height:${markerSize}px">${markerPreviewHtml(site.bucket, def.color || hashColor(site.layerKey), visualSize, site.campgroundType).replace(/stroke-width="([0-9.]+)"/g, (_, value) => `stroke-width="${Number(value) * Number(strokeScale)}"`)}</span>`;
     el.addEventListener('click', (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
-      openSitePopup(site.lngLat, popupHtmlForSite(site.feature.properties));
+      openSitePopup(placed.displayLngLat, popupHtmlForSite(site.feature.properties));
     });
-    const marker = new maptilersdk.Marker({ element: el, anchor: 'center' }).setLngLat(site.lngLat).addTo(model.map);
+    const marker = new maptilersdk.Marker({ element: el, anchor: 'center' }).setLngLat(placed.displayLngLat).addTo(model.map);
     model.domMarkers.push(marker);
   }
 }
