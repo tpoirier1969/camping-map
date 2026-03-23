@@ -428,13 +428,13 @@ function bucketSymbol(bucket) {
   switch (bucket) {
     case 'federal':
     case 'national_forest':
-      return 'tent';
+      return 'federal-arrowhead';
     case 'state':
-      return 'tent';
+      return 'state-flag';
     case 'state_local':
       return 'flag';
     case 'local':
-      return 'tent';
+      return 'picnic-table';
     case 'boondocking':
       return 'tree';
     case 'private':
@@ -688,6 +688,14 @@ async function fetchJsonWithTimeout(url, timeoutMs = 12000) {
 }
 
 async function loadFirstAvailable(urls, target = 'sites') {
+  const inline = window.CAMPING_INLINE || null;
+  if (target === 'sites' && inline && inline.sites) {
+    model.dataLoad[`${target}Attempted`] = [{ url: 'inline-data', ok: true, status: 200, reason: '' }];
+    model.dataLoad[`${target}Url`] = 'inline-data';
+    model.dataLoad[`${target}Error`] = '';
+    refreshStatusText();
+    return inline.sites;
+  }
   const attempts = [];
   for (const url of urls) {
     model.dataLoad[`${target}Attempted`] = [...attempts, { url, ok: false, status: 'trying', reason: 'Trying…' }];
@@ -1120,7 +1128,14 @@ function rebuildBoondockingZonesFromRaw() {
 }
 
 async function loadBoondockingZoneData() {
-  const localZones = await loadFirstAvailable(['data/boondocking-zones.geojson'], 'boondockingZonesLocal');
+  const inline = window.CAMPING_INLINE || null;
+  const inlineZones = inline && inline.boondockingZones ? inline.boondockingZones : null;
+  const localZones = inlineZones || await loadFirstAvailable(['data/boondocking-zones.geojson'], 'boondockingZonesLocal');
+  if (inlineZones) {
+    model.dataLoad.boondockingZonesLocalAttempted = [{ url: 'inline-data', ok: true, status: 200, reason: '' }];
+    model.dataLoad.boondockingZonesLocalUrl = 'inline-data';
+    model.dataLoad.boondockingZonesLocalError = '';
+  }
   const localFc = normalizeBoondockingZoneFeatures(localZones);
   if (localFc.features.length) {
     model.boondockingZonesRaw = localFc;

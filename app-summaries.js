@@ -1,7 +1,7 @@
-const VERSION = 'v20.5.9.2';
+const VERSION = 'v20.5.9.5';
 const DEFAULT_API_KEYS = {
-  maptiler: '3jVO6TokbQhyTqtAmF8G',
-  thunderforest: 'c0ceacbdeb224697bdedd71af8b20abd'
+  maptiler: '',
+  thunderforest: ''
 };
 const SITE_DATA_URLS = ['data/sites.json'];
 const EXTRA_SITE_DATA_URLS = [];
@@ -221,7 +221,7 @@ const model = {
   addMode: false,
   hasApiKey: false,
   styleReady: false,
-  mapStyleMode: localStorage.getItem(STORAGE_KEYS.basemap) || 'outdoor',
+  mapStyleMode: localStorage.getItem(STORAGE_KEYS.basemap) || 'osm',
   terrainEnabled: localStorage.getItem(STORAGE_KEYS.terrain) === 'true',
   terrainExaggeration: (() => { const raw = Number(localStorage.getItem(STORAGE_KEYS.terrainExaggeration)); return Number.isFinite(raw) && raw >= 1 && raw <= 3 ? raw : 1.5; })(),
   tiltEnabled: localStorage.getItem(STORAGE_KEYS.tilt) === 'true',
